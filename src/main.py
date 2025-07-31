@@ -1,26 +1,55 @@
-from typing import Any
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 import logging
 
+from src.api.routes import router
+from src.config import settings
+
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="IT Newsfeed Platform", version="1.0.0")
 
-# In-memory storage
-events_storage: list[dict[str, Any]] = []
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown events"""
+    logger.info("Starting IT Newsfeed Platform...")
+    
+    # Startup: Initialize any needed resources
+    # TODO
+    # - Initialize ChromaDB connection
+    # - Set up background task queues
+    # - Validate configuration
+    
+    yield
+    
+    # Shutdown: Clean up resources
+    logger.info("Shutting down IT Newsfeed Platform...")
 
-@app.post("/ingest")
-def ingest_events(events: list[dict[str, Any]]):
-    """Accept JSON array and store it"""
-    events_storage.extend(events)
-    return {"status": "ok"}
 
-@app.get("/retrieve")
-def retrieve_events():
-    """Return all stored events"""
-    return events_storage
+app = FastAPI(
+    title="IT Newsfeed Platform",
+    description="Real-time IT news aggregation and filtering system",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Include API routes
+app.include_router(router)
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "IT Newsfeed Platform"}
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "src.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        log_level="info"
+    )
