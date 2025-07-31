@@ -9,3 +9,9 @@ fix:
 
 sync:
 	uv sync
+
+dev: 
+	uv run uvicorn src.main:app --reload
+
+start:
+	uv run python -m src.main
