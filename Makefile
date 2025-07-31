@@ -15,3 +15,6 @@ dev:
 
 start:
 	uv run python -m src.main
+
+ui:
+	uv run streamlit run src/ui.py --server.port 8501

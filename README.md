@@ -13,6 +13,7 @@ This system is architected to continuously fetch IT-related news, apply intellig
 * **Intelligent Filtering:** A multi-factor scoring model filters content for IT manager relevance, minimizing false positives.
 * **Semantic Vector Search:** ChromaDB-powered similarity search using content embeddings with built-in persistence.
 * **Dynamic Ranking:** Balances importance and recency with configurable weights exposed via the API.
+* **Streamlit Web UI:** User-friendly interface for ingesting and retrieving news events with file upload support and real-time statistics.
 * **Production-Ready Practices:** Type-safe, tested, and scalable architecture using modern tools.
 
 ## **System Requirements**
@@ -43,10 +44,26 @@ source .venv/bin/activate
 
 ```bash
 # Run in development mode with auto-reload
-uvicorn app.main:app --reload
+make dev
+# or
+uv run uvicorn src.main:app --reload
 ```
 
-**2. API Usage**
+**2. Start the Streamlit UI (Optional)**
+
+```bash
+# Run the Streamlit UI in a separate terminal
+make ui
+# or
+uv run streamlit run src/ui.py --server.port 8501
+```
+
+The UI will be available at `http://localhost:8501` and provides a user-friendly interface for:
+- **Ingest Events**: Upload JSON files or paste JSON directly to ingest news events
+- **Retrieve Events**: View all stored events in a readable format with statistics
+- **Health Check**: Verify API connectivity and status
+
+**3. API Usage**
 
 * **Ingest Events**
 
