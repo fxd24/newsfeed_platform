@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from typing import Any
 import logging
 
@@ -18,12 +18,12 @@ def get_repository(request: Request) -> NewsEventRepository:
 
 
 @router.post("/ingest", response_model=IngestResponse)
-def ingest_events(events: list[dict[str, Any]], request: Request):
+def ingest_events(
+    events: list[dict[str, Any]], 
+    repository: NewsEventRepository = Depends(get_repository)
+):
     """Accept JSON array and store events"""
     try:
-        # Get repository from app state
-        repository = get_repository(request)
-        
         # Validate and parse events using Pydantic
         validated_events = [NewsEvent(**event) for event in events]
         
@@ -46,12 +46,9 @@ def ingest_events(events: list[dict[str, Any]], request: Request):
 
 
 @router.get("/retrieve", response_model=list[NewsEvent])
-def retrieve_events(request: Request):
+def retrieve_events(repository: NewsEventRepository = Depends(get_repository)):
     """Return all stored events"""
     try:
-        # Get repository from app state
-        repository = get_repository(request)
-        
         events = repository.get_all_events()
         
         logger.info(f"Retrieved {len(events)} events from {repository.__class__.__name__}")
