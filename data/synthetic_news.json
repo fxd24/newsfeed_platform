@@ -1,0 +1,359 @@
+[
+    {
+      "id": "keep-001",
+      "source": "cisa-alerts",
+      "title": "CISA Emergency Directive: Critical RCE in SolarWinds Orion Platform",
+      "body": "The Cybersecurity and Infrastructure Security Agency (CISA) has issued an emergency directive requiring federal agencies to immediately disconnect SolarWinds Orion platforms due to active exploitation of CVE-2025-98765. This critical remote code execution vulnerability affects all versions prior to 2024.4.1 and is being actively exploited by nation-state actors. CVSS score: 10.0. Immediate action required.",
+      "published_at": "2025-07-31T16:30:00Z"
+    },
+    {
+      "id": "keep-002",
+      "source": "aws-service-health",
+      "title": "AWS EC2 complete service disruption in us-west-2",
+      "body": "We are experiencing a complete service disruption for Amazon EC2 in the US-West-2 region. All EC2 instances are unreachable, and new instance launches are failing. This is affecting multiple availability zones. Our engineering teams are working on an emergency resolution. ETA for partial recovery: 2 hours. Full recovery: 4-6 hours.",
+      "published_at": "2025-07-31T15:45:00Z"
+    },
+    {
+      "id": "keep-003",
+      "source": "microsoft-security",
+      "title": "Active Directory Domain Services zero-day under active attack",
+      "body": "Microsoft Security Response Center confirms active exploitation of a zero-day vulnerability in Active Directory Domain Services (CVE-2025-44444). Attackers can gain domain administrator privileges without authentication. All Windows Server versions affected. Emergency patch being expedited. Workarounds available. Threat actors observed using this in ransomware campaigns.",
+      "published_at": "2025-07-31T14:20:00Z"
+    },
+    {
+      "id": "keep-004",
+      "source": "azure-service-health",
+      "title": "Global Azure SQL Database connectivity failure",
+      "body": "Azure SQL Database is experiencing global connectivity issues. Applications cannot establish new connections to SQL databases across all regions. Existing connections may be dropped. This is impacting production workloads worldwide. Root cause identified as authentication service failure. Fix being deployed region by region.",
+      "published_at": "2025-07-31T13:15:00Z"
+    },
+    {
+      "id": "keep-005",
+      "source": "github-security",
+      "title": "GitHub Enterprise Server privilege escalation vulnerability",
+      "body": "GitHub has disclosed a critical privilege escalation vulnerability (CVE-2025-55555) in GitHub Enterprise Server versions 3.9.0 through 3.11.5. Users with repository access can escalate to site administrator privileges. Patch available immediately. Exploit code expected to be public within 24 hours. Self-hosted instances should update urgently.",
+      "published_at": "2025-07-31T12:30:00Z"
+    },
+    {
+      "id": "keep-006",
+      "source": "vmware-security",
+      "title": "ESXi hypervisor guest-to-host escape vulnerability",
+      "body": "VMware ESXi versions 7.0 and 8.0 contain a critical vulnerability (CVE-2025-66666) allowing virtual machine guest escape to hypervisor host. CVSS 9.3. VM guests can execute code on the ESXi host with root privileges. Patches available for all supported versions. Workarounds require VM configuration changes.",
+      "published_at": "2025-07-31T11:45:00Z"
+    },
+    {
+      "id": "keep-007",
+      "source": "reddit",
+      "title": "PSA: PostgreSQL 16.x remote code execution via SQL injection",
+      "body": "Security researcher just published details about CVE-2025-77777 in PostgreSQL 16.0-16.3. Standard parameterized queries are NOT sufficient protection. This bypasses most SQL injection protections and allows RCE as postgres user. Patch released 2 hours ago. If you're running PG 16.x, drop everything and patch NOW. Seeing active scanning already.",
+      "published_at": "2025-07-31T10:15:00Z"
+    },
+    {
+      "id": "keep-008",
+      "source": "cisco-security",
+      "title": "Critical authentication bypass in Cisco ASA firewalls",
+      "body": "Cisco ASA and FTD firewalls running software versions 9.16 through 9.19 contain a critical authentication bypass vulnerability. Unauthenticated attackers can gain administrative access to firewall management interface. CVE-2025-88888, CVSS 9.8. Cisco recommends immediate patching or implementing access control workarounds.",
+      "published_at": "2025-07-31T09:30:00Z"
+    },
+    {
+      "id": "keep-009",
+      "source": "kubernetes-security",
+      "title": "Kubernetes API server denial of service affecting all versions",
+      "body": "A vulnerability in the Kubernetes API server (CVE-2025-99999) allows unauthenticated attackers to cause denial of service by sending malformed requests. All Kubernetes versions 1.25+ affected. Clusters become unresponsive, requiring restart. Patch available for latest minor versions. Workaround involves API server configuration changes.",
+      "published_at": "2025-07-31T08:45:00Z"
+    },
+    {
+      "id": "keep-010",
+      "source": "office365-status",
+      "title": "Exchange Online global mailflow disruption",
+      "body": "Microsoft Exchange Online is experiencing global mail flow disruption. Emails are not being delivered between tenants and external domains. Internal emails within organizations may be delayed by several hours. Issue started at 06:00 UTC. Microsoft engineering teams are implementing emergency fixes. Business continuity plans should be activated.",
+      "published_at": "2025-07-31T07:20:00Z"
+    },
+    {
+      "id": "keep-011",
+      "source": "docker-security",
+      "title": "Docker Engine container escape vulnerability in all versions",
+      "body": "Docker Engine versions 20.10.0 through 24.0.7 contain a container escape vulnerability (CVE-2025-11110). Attackers with ability to run containers can escape to host system with root privileges. Affects default Docker installations. Emergency patches being released. Container runtime isolation should be reviewed immediately.",
+      "published_at": "2025-07-31T06:15:00Z"
+    },
+    {
+      "id": "keep-012",
+      "source": "google-cloud-status",
+      "title": "Google Cloud Storage global outage affecting all regions",
+      "body": "Google Cloud Storage is experiencing a global outage affecting all regions. Applications cannot read or write objects to Cloud Storage buckets. This is impacting backup operations, application data storage, and CDN content delivery. Google engineering teams are investigating. No ETA for resolution provided yet.",
+      "published_at": "2025-07-31T05:30:00Z"
+    },
+    {
+      "id": "keep-013",
+      "source": "elastic-security",
+      "title": "Elasticsearch remote code execution in cluster management",
+      "body": "Elasticsearch versions 7.15.0 through 8.8.2 contain a remote code execution vulnerability in cluster management APIs. Authenticated users with cluster management privileges can execute arbitrary code on all cluster nodes. CVE-2025-22220, CVSS 8.8. Patch available, requires cluster restart.",
+      "published_at": "2025-07-31T04:45:00Z"
+    },
+    {
+      "id": "keep-014",
+      "source": "redis-security",
+      "title": "Redis server memory corruption leading to RCE",
+      "body": "Redis versions 6.0.0 through 7.2.3 contain a memory corruption vulnerability that can lead to remote code execution. Malicious clients can trigger the vulnerability through specially crafted commands. CVE-2025-33330, CVSS 9.1. All Redis deployments should be updated immediately. Workarounds involve command filtering.",
+      "published_at": "2025-07-31T03:20:00Z"
+    },
+    {
+      "id": "keep-015",
+      "source": "atlassian-security",
+      "title": "Confluence Server critical SQL injection vulnerability",
+      "body": "Atlassian Confluence Server and Data Center versions 7.19.0 through 8.5.4 contain a critical SQL injection vulnerability. Unauthenticated attackers can execute arbitrary SQL queries and potentially gain system access. CVE-2025-44440, CVSS 9.3. Patch available immediately. Database backups recommended before patching.",
+      "published_at": "2025-07-31T02:15:00Z"
+    },
+    {
+      "id": "borderline-001",
+      "source": "microsoft-updates",
+      "title": "Windows Server 2022 optional cumulative update available",
+      "body": "Microsoft has released an optional cumulative update for Windows Server 2022 (KB5029999). This update includes performance improvements and minor bug fixes for file sharing services. No security fixes included. The update will be included in next month's mandatory update cycle. Testing recommended before deployment.",
+      "published_at": "2025-07-31T16:00:00Z"
+    },
+    {
+      "id": "borderline-002",
+      "source": "aws-announcements",
+      "title": "Scheduled maintenance for AWS Lambda in ap-southeast-1",
+      "body": "AWS Lambda will undergo scheduled maintenance in the Asia Pacific (Singapore) region on August 5, 2025, from 02:00 to 04:00 SGT. During this time, function invocations may experience increased latency. New function deployments should be avoided during the maintenance window. No service interruption expected.",
+      "published_at": "2025-07-31T15:30:00Z"
+    },
+    {
+      "id": "borderline-003",
+      "source": "azure-updates",
+      "title": "Azure DevOps Server 2022.1 feature update released",
+      "body": "Microsoft has released Azure DevOps Server 2022.1 with new project management features and improved Git performance. The update includes enhanced security scanning integration and new reporting capabilities. Upgrade is optional and can be scheduled during maintenance windows. Full release notes available on Microsoft Docs.",
+      "published_at": "2025-07-31T14:45:00Z"
+    },
+    {
+      "id": "borderline-004",
+      "source": "docker-blog",
+      "title": "Docker announces acquisition of container security startup",
+      "body": "Docker has announced the acquisition of SecureContainer, a startup focused on container runtime security. The acquisition will enhance Docker's security capabilities and provide better vulnerability scanning for Docker Hub. Integration of SecureContainer's technology expected in Q4 2025. Existing SecureContainer customers will be migrated to Docker solutions.",
+      "published_at": "2025-07-31T13:30:00Z"
+    },
+    {
+      "id": "borderline-005",
+      "source": "github-blog",
+      "title": "GitHub Copilot Enterprise now supports custom code completion models",
+      "body": "GitHub has announced that Copilot Enterprise customers can now train custom code completion models using their organization's codebase. This feature is currently in private beta and requires GitHub Enterprise Cloud subscription. Organizations can improve code suggestions by incorporating their internal coding standards and patterns.",
+      "published_at": "2025-07-31T12:15:00Z"
+    },
+    {
+      "id": "borderline-006",
+      "source": "cloudflare-blog",
+      "title": "Cloudflare introduces new edge computing regions in Africa",
+      "body": "Cloudflare has announced the opening of three new edge computing regions in Lagos, Cairo, and Johannesburg. This expansion will reduce latency for African users and provide better performance for Cloudflare Workers. The new regions are now available for all Cloudflare customers at no additional cost.",
+      "published_at": "2025-07-31T11:30:00Z"
+    },
+    {
+      "id": "borderline-007",
+      "source": "mongodb-blog",
+      "title": "MongoDB 7.2 performance improvements for time-series data",
+      "body": "MongoDB 7.2 introduces significant performance improvements for time-series collections, with up to 40% faster insert operations and 25% better compression. The update also includes improved query optimization for temporal data and better memory management. Upgrade is recommended for time-series workloads.",
+      "published_at": "2025-07-31T10:45:00Z"
+    },
+    {
+      "id": "borderline-008",
+      "source": "elastic-blog",
+      "title": "Elastic announces end-of-life dates for Elasticsearch 7.x",
+      "body": "Elastic has announced that Elasticsearch 7.x will reach end-of-life on December 31, 2025. Organizations running Elasticsearch 7.x should plan migration to version 8.x before the EOL date. Extended support will be available for enterprise customers at additional cost. Migration tools and documentation are available.",
+      "published_at": "2025-07-31T09:15:00Z"
+    },
+    {
+      "id": "discard-001",
+      "source": "techcrunch",
+      "title": "Apple announces iPhone 17 with revolutionary camera technology",
+      "body": "Apple has unveiled the iPhone 17 featuring a new 108-megapixel camera system with advanced AI photography capabilities. The device includes a titanium frame, improved battery life, and a faster A19 Bionic chip. Pre-orders begin next Friday with delivery starting in October. Pricing starts at $1,199 for the base model.",
+      "published_at": "2025-07-31T16:15:00Z"
+    },
+    {
+      "id": "discard-002",
+      "source": "gaming-news",
+      "title": "Sony PlayStation 6 specs leaked ahead of official announcement",
+      "body": "Industry insiders have leaked preliminary specifications for Sony's upcoming PlayStation 6 gaming console. The system reportedly features custom AMD Zen 5 processors and RDNA 4 graphics, supporting 8K gaming at 120fps. Sony has not confirmed these specifications. Official announcement expected at next month's gaming conference.",
+      "published_at": "2025-07-31T15:45:00Z"
+    },
+    {
+      "id": "discard-003",
+      "source": "finance-tech",
+      "title": "Netflix reports record quarterly subscriber growth",
+      "body": "Netflix has reported its strongest quarterly subscriber growth in three years, adding 15.2 million new subscribers globally. The streaming giant attributes the growth to successful original content and password-sharing crackdown initiatives. Revenue increased 12% year-over-year. Stock price jumped 8% in after-hours trading.",
+      "published_at": "2025-07-31T14:30:00Z"
+    },
+    {
+      "id": "discard-004",
+      "source": "consumer-reports",
+      "title": "Best smart home devices for 2025: comprehensive buying guide",
+      "body": "Our annual review of smart home devices highlights the top products across categories including smart speakers, security cameras, and thermostats. This year's winners include the Amazon Echo Studio, Google Nest Cam, and Ecobee SmartThermostat. We tested over 200 devices to compile this comprehensive guide for consumers.",
+      "published_at": "2025-07-31T13:45:00Z"
+    },
+    {
+      "id": "discard-005",
+      "source": "social-media-today",
+      "title": "Instagram introduces new AI-powered content moderation features",
+      "body": "Meta has announced new AI-powered content moderation features for Instagram, designed to better detect and remove harmful content. The system uses advanced machine learning to identify harassment, misinformation, and spam with 95% accuracy. The feature is rolling out globally over the next month to all Instagram users.",
+      "published_at": "2025-07-31T12:20:00Z"
+    },
+    {
+      "id": "discard-006",
+      "source": "automotive-tech",
+      "title": "Tesla's new Autopilot software reduces accidents by 40%",
+      "body": "Tesla has released new data showing their latest Autopilot software has reduced accidents by 40% compared to human drivers. The study analyzed over 10 billion miles of driving data from Tesla vehicles worldwide. The improvements are attributed to better object detection and prediction algorithms powered by their custom AI chips.",
+      "published_at": "2025-07-31T11:15:00Z"
+    },
+    {
+      "id": "discard-007",
+      "source": "youtube-creators",
+      "title": "YouTube announces new monetization options for short-form content",
+      "body": "YouTube has introduced new monetization features for YouTube Shorts, allowing creators to earn revenue from short-form vertical videos. The program includes ad revenue sharing, brand partnership tools, and creator fund bonuses. Eligible creators need 1,000 subscribers and 10 million short views in the past 90 days.",
+      "published_at": "2025-07-31T10:30:00Z"
+    },
+    {
+      "id": "discard-008",
+      "source": "space-news",
+      "title": "SpaceX successfully launches 60 Starlink satellites",
+      "body": "SpaceX has successfully launched another batch of 60 Starlink satellites aboard a Falcon 9 rocket from Cape Canaveral. This brings the total number of active Starlink satellites to over 5,000. The launch marks the 15th flight for this particular Falcon 9 first stage booster, setting a new reusability record for the company.",
+      "published_at": "2025-07-31T09:45:00Z"
+    },
+    {
+      "id": "discard-009",
+      "source": "food-tech",
+      "title": "McDonald's tests AI-powered drive-through ordering system",
+      "body": "McDonald's is testing an AI-powered voice recognition system for drive-through ordering at 100 locations across the United States. The system can understand complex orders and upsell menu items based on customer preferences. Early results show 15% faster order processing and improved order accuracy compared to human operators.",
+      "published_at": "2025-07-31T08:30:00Z"
+    },
+    {
+      "id": "discard-010",
+      "source": "retail-technology",
+      "title": "Amazon opens new fulfillment center powered by robotics",
+      "body": "Amazon has opened a new 1-million-square-foot fulfillment center in Ohio featuring advanced robotics systems. The facility can process 1 million packages per day using autonomous mobile robots and AI-powered inventory management. The center will create 2,500 jobs and serve customers across the Midwest region.",
+      "published_at": "2025-07-31T07:45:00Z"
+    },
+    {
+      "id": "edge-001",
+      "source": "aws-service-health",
+      "title": "Amazon RDS experiencing increased connection timeouts in us-east-1",
+      "body": "We are investigating increased connection timeouts for Amazon RDS instances in the US-East-1 region. Customers may experience difficulty connecting to their RDS instances, including MySQL, PostgreSQL, and Aurora clusters. New connections are primarily affected, while existing connections remain stable. We are working to identify and resolve the root cause.",
+      "published_at": "2025-07-31T16:45:00Z"
+    },
+    {
+      "id": "edge-002",
+      "source": "azure-service-health",
+      "title": "Amazon RDS experiencing increased connection timeouts in us-east-1",
+      "body": "We are investigating increased connection timeouts for Amazon RDS instances in the US-East-1 region. This is a duplicate report from AWS with identical content. Customers may experience difficulty connecting to their RDS instances. The issue appears to be the same as reported by AWS service health.",
+      "published_at": "2025-07-31T16:50:00Z"
+    },
+    {
+      "id": "edge-003",
+      "source": "reddit",
+      "title": "Critical security vulnerability discovered!!!",
+      "body": "Hey everyone, I just discovered what I think might be a critical security vulnerability in my home router. When I type in the admin password incorrectly three times, it shows me a 'password incorrect' message. This seems like a major security flaw that hackers could exploit. Should I report this to the FBI?",
+      "published_at": "2025-07-31T15:20:00Z"
+    },
+    {
+      "id": "edge-004",
+      "source": "security-blog",
+      "title": "New malware targets WordPress sites",
+      "body": "",
+      "published_at": "2025-07-31T14:10:00Z"
+    },
+    {
+      "id": "edge-005",
+      "source": "tech-forum",
+      "title": "",
+      "body": "Just wanted to let everyone know that there's a major issue with SSL certificates expiring unexpectedly. This affects all major cloud providers and could result in complete service outages. I don't have more details yet but wanted to give everyone a heads up to check their certificate expiration dates.",
+      "published_at": "2025-07-31T13:00:00Z"
+    },
+    {
+      "id": "edge-006",
+      "source": "vendor-blog",
+      "title": "our amazing new enterprise solution will revolutionize your it operations",
+      "body": "introducing cloudmanager pro 3000 - the most critical enterprise solution for managing your critical infrastructure needs. this critical tool provides critical insights into your critical systems with critical performance improvements. contact our sales team today for a critical demonstration of this critical technology.",
+      "published_at": "2025-07-31T12:40:00Z"
+    },
+    {
+      "id": "ranking-001-high-recent",
+      "source": "cisa-alerts",
+      "title": "CISA Alert: Nation-state actors exploiting Exchange Server vulnerability",
+      "body": "CISA has issued an alert regarding active exploitation of Microsoft Exchange Server by nation-state actors. The vulnerability allows remote code execution and full server compromise. All Exchange Server deployments should be patched immediately. This is part of an ongoing campaign targeting critical infrastructure.",
+      "published_at": "2025-07-31T16:55:00Z"
+    },
+    {
+      "id": "ranking-002-high-old",
+      "source": "security-advisory",
+      "title": "Critical zero-day in Apache HTTP Server under active attack",
+      "body": "Apache HTTP Server versions 2.4.0 through 2.4.57 contain a critical zero-day vulnerability allowing remote code execution. The vulnerability is being actively exploited in the wild by multiple threat groups. Emergency patches are available. This affects millions of web servers worldwide.",
+      "published_at": "2025-07-30T08:00:00Z"
+    },
+    {
+      "id": "ranking-003-med-recent",
+      "source": "github-status",
+      "title": "GitHub Actions experiencing workflow execution delays",
+      "body": "GitHub Actions is currently experiencing delays in workflow execution across all regions. New workflow runs may be queued for extended periods before starting execution. This is impacting CI/CD pipelines and automated deployments. We have identified the issue and are working on a resolution.",
+      "published_at": "2025-07-31T16:50:00Z"
+    },
+    {
+      "id": "ranking-004-med-old",
+      "source": "docker-status",
+      "title": "Docker Hub registry experiencing intermittent push failures",
+      "body": "Docker Hub is experiencing intermittent issues with image push operations. Some users may encounter timeout errors when trying to upload container images. Pull operations are not affected. Our engineering team is investigating the root cause and implementing fixes.",
+      "published_at": "2025-07-30T14:30:00Z"
+    },
+    {
+      "id": "ranking-005-low-recent",
+      "source": "aws-announcements",
+      "title": "AWS Lambda adds support for Python 3.12 runtime",
+      "body": "AWS Lambda now supports Python 3.12 runtime for serverless functions. This new runtime includes performance improvements and updated libraries. Existing functions can be migrated at your convenience. The Python 3.8 runtime will be deprecated in six months.",
+      "published_at": "2025-07-31T16:40:00Z"
+    },
+    {
+      "id": "source-twitter-001",
+      "source": "twitter",
+      "title": "Security researcher discovers new iOS jailbreak method",
+      "body": "@security_researcher: Just published details about a new iOS 17.5 jailbreak method that exploits kernel vulnerabilities. This could potentially be used by malware authors. Apple has been notified and is working on a patch. Thread with technical details below 🧵",
+      "published_at": "2025-07-31T15:15:00Z"
+    },
+    {
+      "id": "source-hackernews-001",
+      "source": "hackernews",
+      "title": "PostgreSQL query planner optimization causes data loss",
+      "body": "Discussion on Hacker News about a PostgreSQL query planner bug that can cause data loss in specific edge cases involving complex joins and partial indexes. The bug affects PostgreSQL 14.0 through 15.4. Database administrators should review their query patterns and consider workarounds until patches are available.",
+      "published_at": "2025-07-31T14:00:00Z"
+    },
+    {
+      "id": "source-reddit-netsec-001",
+      "source": "reddit",
+      "title": "New technique bypasses Windows Defender Real-time Protection",
+      "body": "Researchers have developed a new technique that can bypass Windows Defender's real-time protection using DLL hijacking and process hollowing. The method works on fully updated Windows 11 systems. Microsoft has been notified through responsible disclosure. Proof-of-concept code will be released after patch availability.",
+      "published_at": "2025-07-31T13:25:00Z"
+    },
+    {
+      "id": "content-technical-001",
+      "source": "linux-kernel",
+      "title": "Linux kernel memory management vulnerability in mm/mmap.c",
+      "body": "A use-after-free vulnerability has been discovered in the Linux kernel's memory management subsystem, specifically in mm/mmap.c. The vulnerability (CVE-2025-55550) can be triggered through specific mmap() and munmap() sequences, potentially leading to privilege escalation. Affected versions: 5.15.0 through 6.4.12. Patch available in latest stable releases.",
+      "published_at": "2025-07-31T12:50:00Z"
+    },
+    {
+      "id": "content-business-001",
+      "source": "security-magazine",
+      "title": "Enterprise security leaders report 300% increase in ransomware attacks",
+      "body": "A new survey of 500 enterprise security leaders reveals a 300% increase in ransomware attacks over the past year. The attacks are becoming more sophisticated, targeting cloud infrastructure and backup systems. Organizations are investing heavily in zero-trust architectures and incident response capabilities to combat the threat.",
+      "published_at": "2025-07-31T11:40:00Z"
+    },
+    {
+      "id": "content-brief-001",
+      "source": "security-alert",
+      "title": "Fortinet FortiOS critical RCE - patch now",
+      "body": "CVE-2025-66660. CVSS 9.8. All versions affected. Patch available.",
+      "published_at": "2025-07-31T10:25:00Z"
+    },
+    {
+      "id": "content-detailed-001",
+      "source": "security-research",
+      "title": "Comprehensive analysis: Supply chain attack targeting NPM packages",
+      "body": "Security researchers have uncovered a sophisticated supply chain attack targeting popular NPM packages used in enterprise JavaScript applications. The attack involves compromising package maintainer accounts and injecting malicious code that executes during the build process. The malicious code establishes persistence by modifying webpack configurations and can exfiltrate source code, environment variables, and deployment credentials. Over 200 packages have been identified as compromised, with millions of downloads combined. The attack appears to be the work of a nation-state actor based on code analysis and infrastructure attribution. Organizations using Node.js should immediately audit their package dependencies, review build processes for unauthorized modifications, and implement package integrity verification. A full list of compromised packages and indicators of compromise are available in the appendix. The attack demonstrates the critical importance of software supply chain security and the need for comprehensive dependency management strategies.",
+      "published_at": "2025-07-31T09:10:00Z"
+    }
+  ]
