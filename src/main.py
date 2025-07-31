@@ -3,7 +3,11 @@ from contextlib import asynccontextmanager
 import logging
 
 from src.api.routes import router
-from src.config import settings
+
+# GLOBAL SETTINGS
+PORT = 8000
+HOST = "0.0.0.0"
+DEBUG = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,8 +52,8 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "src.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug,
+        host=HOST,
+        port=PORT,
+        reload=DEBUG,
         log_level="info"
     )
