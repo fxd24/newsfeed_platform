@@ -49,28 +49,18 @@ def check_health():
             st.error(f"❌ Unexpected error: {str(e)}")
 
 def show_main_page():
-    """Main page with ingest and retrieve functionality"""
+    """Main page with ingest in sidebar and retrieve as main content"""
     
-    # Create two columns for ingest and retrieve
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
+    # Sidebar for ingest functionality
+    with st.sidebar:
         show_ingest_section()
     
-    with col2:
-        show_retrieve_section()
+    # Main content area for retrieve functionality
+    show_retrieve_section()
 
 def show_ingest_section():
     """Ingest section with validation and ingest functionality"""
     st.header("📥 Ingest News Events")
-    
-    # Initialize session state for validation
-    if 'events_validated' not in st.session_state:
-        st.session_state.events_validated = False
-    if 'validated_events' not in st.session_state:
-        st.session_state.validated_events = None
-    if 'validation_error' not in st.session_state:
-        st.session_state.validation_error = None
     
     # File upload option
     st.subheader("Upload JSON File")
@@ -88,8 +78,8 @@ def show_ingest_section():
         placeholder='[{"id": "example-001", "source": "example", "title": "Example News", "body": "Example content", "published_at": "2025-01-01T00:00:00Z"}]'
     )
     
-    # Validation button
-    if st.button("🔍 Validate JSON", type="primary"):
+    # Single ingest button that handles validation internally
+    if st.button("🚀 Ingest Events", type="primary"):
         events = None
         error = None
         
@@ -117,40 +107,26 @@ def show_ingest_section():
         else:
             error = "Please provide JSON data either by uploading a file or pasting JSON"
         
-        # Update session state
+        # Handle the result
         if error:
-            st.session_state.validation_error = error
-            st.session_state.events_validated = False
-            st.session_state.validated_events = None
+            st.error(f"❌ Cannot ingest: {error}")
         else:
-            st.session_state.validation_error = None
-            st.session_state.events_validated = True
-            st.session_state.validated_events = events
-            st.rerun()
-    
-    # Show validation result
-    if st.session_state.validation_error:
-        st.error(f"❌ Validation failed: {st.session_state.validation_error}")
-        st.session_state.events_validated = False
-    
-    elif st.session_state.events_validated and st.session_state.validated_events:
-        events = st.session_state.validated_events
-        st.success(f"✅ Successfully validated {len(events)} events")
-        
-        # Show preview of events
-        with st.expander("Preview Events"):
-            for i, event in enumerate(events[:5]):  # Show first 5 events
-                st.write(f"**Event {i+1}:**")
-                st.write(f"- ID: {event.get('id', 'N/A')}")
-                st.write(f"- Title: {event.get('title', 'N/A')}")
-                st.write(f"- Source: {event.get('source', 'N/A')}")
-                st.write("---")
+            # Show preview of events before ingesting
+            st.success(f"✅ Validated {len(events)} events")
             
-            if len(events) > 5:
-                st.write(f"... and {len(events) - 5} more events")
-        
-        # Ingest button (only shown after successful validation)
-        if st.button("🚀 Ingest Events", type="primary"):
+            # Show preview of events
+            with st.expander("Preview Events"):
+                for i, event in enumerate(events[:5]):  # Show first 5 events
+                    st.write(f"**Event {i+1}:**")
+                    st.write(f"- ID: {event.get('id', 'N/A')}")
+                    st.write(f"- Title: {event.get('title', 'N/A')}")
+                    st.write(f"- Source: {event.get('source', 'N/A')}")
+                    st.write("---")
+                
+                if len(events) > 5:
+                    st.write(f"... and {len(events) - 5} more events")
+            
+            # Proceed with ingestion
             with st.spinner("Ingesting events..."):
                 try:
                     response = requests.post(
@@ -162,10 +138,6 @@ def show_ingest_section():
                     if response.status_code == 200:
                         result = response.json()
                         st.success(f"✅ {result['message']}")
-                        # Clear validation state after successful ingest
-                        st.session_state.events_validated = False
-                        st.session_state.validated_events = None
-                        st.rerun()
                     else:
                         st.error(f"❌ Error: {response.status_code} - {response.text}")
                         
