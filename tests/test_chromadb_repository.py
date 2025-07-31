@@ -1,7 +1,6 @@
 import pytest
 import tempfile
 import shutil
-import os
 from datetime import datetime
 from src.repositories.news_event_repository import ChromaDBNewsEventRepository
 from src.models.domain import NewsEvent

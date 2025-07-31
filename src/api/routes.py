@@ -1,30 +1,36 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Any
 import logging
 
 from src.models.domain import NewsEvent
 from src.models.api import IngestResponse
+from src.repositories.news_event_repository import NewsEventRepository
 
 logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter()
 
-# Simple in-memory storage
-events_storage: list[NewsEvent] = []
+
+def get_repository(request: Request) -> NewsEventRepository:
+    """Get the repository instance from FastAPI app state"""
+    return request.app.state.repository
 
 
 @router.post("/ingest", response_model=IngestResponse)
-def ingest_events(events: list[dict[str, Any]]):
+def ingest_events(events: list[dict[str, Any]], request: Request):
     """Accept JSON array and store events"""
     try:
+        # Get repository from app state
+        repository = get_repository(request)
+        
         # Validate and parse events using Pydantic
         validated_events = [NewsEvent(**event) for event in events]
         
-        # Store the events
-        events_storage.extend(validated_events)
+        # Store the events using repository
+        repository.create_events(validated_events)
         
-        logger.info(f"Stored {len(validated_events)} events")
+        logger.info(f"Stored {len(validated_events)} events using {repository.__class__.__name__}")
         
         return IngestResponse(
             status="ok",
@@ -40,8 +46,22 @@ def ingest_events(events: list[dict[str, Any]]):
 
 
 @router.get("/retrieve", response_model=list[NewsEvent])
-def retrieve_events():
+def retrieve_events(request: Request):
     """Return all stored events"""
-    logger.info(f"Retrieved {len(events_storage)} events")
-    
-    return events_storage
+    try:
+        # Get repository from app state
+        repository = get_repository(request)
+        
+        events = repository.get_all_events()
+        
+        logger.info(f"Retrieved {len(events)} events from {repository.__class__.__name__}")
+        
+        return events
+        
+    except Exception as e:
+        logger.error(f"Error during retrieval: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve events: {str(e)}"
+        )
+

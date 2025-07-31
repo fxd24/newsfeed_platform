@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
-from src.models.domain import NewsEvent
 
 
 class IngestResponse(BaseModel):

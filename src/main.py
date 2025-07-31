@@ -1,34 +1,55 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import logging
+import os
 
 from src.api.routes import router
+from src.repositories.news_event_repository import InMemoryNewsEventRepository, ChromaDBNewsEventRepository
 
 # GLOBAL SETTINGS
 PORT = 8000
 HOST = "0.0.0.0"
 DEBUG = False
+STORAGE_TYPE = "memory"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global repository instance
+repository = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events"""
+    global repository
+    
     logger.info("Starting IT Newsfeed Platform...")
     
-    # Startup: Initialize any needed resources
-    # TODO
-    # - Initialize ChromaDB connection
-    # - Set up background task queues
-    # - Validate configuration
+    # Startup: Initialize repository based on configuration
+    storage_type = STORAGE_TYPE
+    
+    if storage_type == "chromadb":
+        chroma_dir = os.getenv("CHROMA_DIR", "./data/chromadb")
+        logger.info(f"Initializing ChromaDB repository at {chroma_dir}")
+        repository = ChromaDBNewsEventRepository(persist_directory=chroma_dir)
+    else:
+        logger.info("Initializing in-memory repository")
+        repository = InMemoryNewsEventRepository()
+    
+    # Make repository available to routes
+    app.state.repository = repository
+    
+    logger.info(f"Repository initialized with {repository.count_events()} existing events")
     
     yield
     
     # Shutdown: Clean up resources
     logger.info("Shutting down IT Newsfeed Platform...")
+    if repository:
+        logger.info("Cleaning up repository...")
+        # Repository cleanup is handled by the implementation
 
 
 app = FastAPI(
