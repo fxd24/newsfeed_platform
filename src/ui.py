@@ -15,24 +15,62 @@ def main():
         layout="wide"
     )
     
-    st.title("📰 IT Newsfeed Platform")
-    st.markdown("A simple interface for ingesting and retrieving IT news events")
+    # Header with health check button
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        st.title("📰 IT Newsfeed Platform")
+        st.markdown("A simple interface for ingesting and retrieving IT news events")
     
-    # Sidebar for navigation
-    page = st.sidebar.selectbox(
-        "Choose a page",
-        ["Ingest Events", "Retrieve Events", "Health Check"]
-    )
+    with col2:
+        st.write("")  # Add some spacing
+        if st.button("🏥 Health Check", type="secondary"):
+            check_health()
     
-    if page == "Ingest Events":
-        show_ingest_page()
-    elif page == "Retrieve Events":
-        show_retrieve_page()
-    elif page == "Health Check":
-        show_health_page()
+    # Main content
+    show_main_page()
 
-def show_ingest_page():
+def check_health():
+    """Check API health and show result"""
+    with st.spinner("Checking API health..."):
+        try:
+            response = requests.get(f"{API_BASE_URL}/health")
+            
+            if response.status_code == 200:
+                health_data = response.json()
+                st.success("✅ API is healthy!")
+                with st.expander("Health Details"):
+                    st.json(health_data)
+            else:
+                st.error(f"❌ API health check failed: {response.status_code}")
+                
+        except requests.exceptions.ConnectionError:
+            st.error("❌ Cannot connect to API server. Make sure the server is running on localhost:8000")
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}")
+
+def show_main_page():
+    """Main page with ingest and retrieve functionality"""
+    
+    # Create two columns for ingest and retrieve
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        show_ingest_section()
+    
+    with col2:
+        show_retrieve_section()
+
+def show_ingest_section():
+    """Ingest section with validation and ingest functionality"""
     st.header("📥 Ingest News Events")
+    
+    # Initialize session state for validation
+    if 'events_validated' not in st.session_state:
+        st.session_state.events_validated = False
+    if 'validated_events' not in st.session_state:
+        st.session_state.validated_events = None
+    if 'validation_error' not in st.session_state:
+        st.session_state.validation_error = None
     
     # File upload option
     st.subheader("Upload JSON File")
@@ -42,106 +80,107 @@ def show_ingest_page():
         help="Upload a JSON file containing an array of news events"
     )
     
-    if uploaded_file is not None:
-        try:
-            # Read and parse the JSON file
-            content = uploaded_file.read()
-            events = json.loads(content)
-            
-            if not isinstance(events, list):
-                st.error("JSON file must contain an array of events")
-                return
-            
-            st.success(f"✅ Successfully loaded {len(events)} events from file")
-            
-            # Show preview of events
-            with st.expander("Preview Events"):
-                for i, event in enumerate(events[:5]):  # Show first 5 events
-                    st.write(f"**Event {i+1}:**")
-                    st.write(f"- ID: {event.get('id', 'N/A')}")
-                    st.write(f"- Title: {event.get('title', 'N/A')}")
-                    st.write(f"- Source: {event.get('source', 'N/A')}")
-                    st.write("---")
-                
-                if len(events) > 5:
-                    st.write(f"... and {len(events) - 5} more events")
-            
-            # Ingest button
-            if st.button("🚀 Ingest Events", type="primary"):
-                with st.spinner("Ingesting events..."):
-                    try:
-                        response = requests.post(
-                            f"{API_BASE_URL}/ingest",
-                            json=events,
-                            headers={"Content-Type": "application/json"}
-                        )
-                        
-                        if response.status_code == 200:
-                            result = response.json()
-                            st.success(f"✅ {result['message']}")
-                        else:
-                            st.error(f"❌ Error: {response.status_code} - {response.text}")
-                            
-                    except requests.exceptions.ConnectionError:
-                        st.error("❌ Cannot connect to API server. Make sure the server is running on localhost:8000")
-                    except Exception as e:
-                        st.error(f"❌ Unexpected error: {str(e)}")
-        
-        except json.JSONDecodeError:
-            st.error("❌ Invalid JSON file")
-        except Exception as e:
-            st.error(f"❌ Error reading file: {str(e)}")
-    
     # Manual input option
     st.subheader("Manual JSON Input")
     manual_json = st.text_area(
         "Or paste JSON array directly:",
-        height=200,
+        height=150,
         placeholder='[{"id": "example-001", "source": "example", "title": "Example News", "body": "Example content", "published_at": "2025-01-01T00:00:00Z"}]'
     )
     
-    if manual_json.strip():
-        try:
-            events = json.loads(manual_json)
-            if not isinstance(events, list):
-                st.error("JSON must be an array of events")
-            else:
-                st.success(f"✅ Valid JSON with {len(events)} events")
-                
-                if st.button("🚀 Ingest Manual Events", type="primary"):
-                    with st.spinner("Ingesting events..."):
-                        try:
-                            response = requests.post(
-                                f"{API_BASE_URL}/ingest",
-                                json=events,
-                                headers={"Content-Type": "application/json"}
-                            )
-                            
-                            if response.status_code == 200:
-                                result = response.json()
-                                st.success(f"✅ {result['message']}")
-                            else:
-                                st.error(f"❌ Error: {response.status_code} - {response.text}")
-                                
-                        except requests.exceptions.ConnectionError:
-                            st.error("❌ Cannot connect to API server. Make sure the server is running on localhost:8000")
-                        except Exception as e:
-                            st.error(f"❌ Unexpected error: {str(e)}")
+    # Validation button
+    if st.button("🔍 Validate JSON", type="primary"):
+        events = None
+        error = None
         
-        except json.JSONDecodeError:
-            st.error("❌ Invalid JSON format")
+        # Try to get events from file upload
+        if uploaded_file is not None:
+            try:
+                content = uploaded_file.read()
+                events = json.loads(content)
+                if not isinstance(events, list):
+                    error = "JSON file must contain an array of events"
+            except json.JSONDecodeError:
+                error = "Invalid JSON file"
+            except Exception as e:
+                error = f"Error reading file: {str(e)}"
+        
+        # Try to get events from manual input
+        elif manual_json.strip():
+            try:
+                events = json.loads(manual_json)
+                if not isinstance(events, list):
+                    error = "JSON must be an array of events"
+            except json.JSONDecodeError:
+                error = "Invalid JSON format"
+        
+        else:
+            error = "Please provide JSON data either by uploading a file or pasting JSON"
+        
+        # Update session state
+        if error:
+            st.session_state.validation_error = error
+            st.session_state.events_validated = False
+            st.session_state.validated_events = None
+        else:
+            st.session_state.validation_error = None
+            st.session_state.events_validated = True
+            st.session_state.validated_events = events
+            st.rerun()
+    
+    # Show validation result
+    if st.session_state.validation_error:
+        st.error(f"❌ Validation failed: {st.session_state.validation_error}")
+        st.session_state.events_validated = False
+    
+    elif st.session_state.events_validated and st.session_state.validated_events:
+        events = st.session_state.validated_events
+        st.success(f"✅ Successfully validated {len(events)} events")
+        
+        # Show preview of events
+        with st.expander("Preview Events"):
+            for i, event in enumerate(events[:5]):  # Show first 5 events
+                st.write(f"**Event {i+1}:**")
+                st.write(f"- ID: {event.get('id', 'N/A')}")
+                st.write(f"- Title: {event.get('title', 'N/A')}")
+                st.write(f"- Source: {event.get('source', 'N/A')}")
+                st.write("---")
+            
+            if len(events) > 5:
+                st.write(f"... and {len(events) - 5} more events")
+        
+        # Ingest button (only shown after successful validation)
+        if st.button("🚀 Ingest Events", type="primary"):
+            with st.spinner("Ingesting events..."):
+                try:
+                    response = requests.post(
+                        f"{API_BASE_URL}/ingest",
+                        json=events,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        st.success(f"✅ {result['message']}")
+                        # Clear validation state after successful ingest
+                        st.session_state.events_validated = False
+                        st.session_state.validated_events = None
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error: {response.status_code} - {response.text}")
+                        
+                except requests.exceptions.ConnectionError:
+                    st.error("❌ Cannot connect to API server. Make sure the server is running on localhost:8000")
+                except Exception as e:
+                    st.error(f"❌ Unexpected error: {str(e)}")
 
-def show_retrieve_page():
+def show_retrieve_section():
+    """Retrieve section with events display"""
     st.header("📤 Retrieve News Events")
     
     # Refresh button
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        if st.button("🔄 Refresh Events", type="primary"):
-            st.rerun()
-    
-    with col2:
-        st.write("Click to refresh the events list")
+    if st.button("🔄 Refresh Events", type="primary"):
+        st.rerun()
     
     # Retrieve events
     with st.spinner("Loading events..."):
@@ -213,31 +252,6 @@ def show_retrieve_page():
             st.error("❌ Cannot connect to API server. Make sure the server is running on localhost:8000")
         except Exception as e:
             st.error(f"❌ Unexpected error: {str(e)}")
-
-def show_health_page():
-    st.header("🏥 API Health Check")
-    
-    if st.button("🔍 Check API Health", type="primary"):
-        with st.spinner("Checking API health..."):
-            try:
-                response = requests.get(f"{API_BASE_URL}/health")
-                
-                if response.status_code == 200:
-                    health_data = response.json()
-                    st.success("✅ API is healthy!")
-                    st.json(health_data)
-                else:
-                    st.error(f"❌ API health check failed: {response.status_code}")
-                    
-            except requests.exceptions.ConnectionError:
-                st.error("❌ Cannot connect to API server. Make sure the server is running on localhost:8000")
-            except Exception as e:
-                st.error(f"❌ Unexpected error: {str(e)}")
-    
-    # Connection info
-    st.subheader("🔗 Connection Information")
-    st.info(f"**API Base URL:** {API_BASE_URL}")
-    st.info("Make sure the FastAPI server is running with: `python -m src.main`")
 
 if __name__ == "__main__":
     main()
