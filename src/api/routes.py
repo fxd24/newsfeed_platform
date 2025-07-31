@@ -3,7 +3,7 @@ from typing import Any
 import logging
 
 from src.models.domain import NewsEvent
-from src.models.api import IngestResponse, RetrieveResponse
+from src.models.api import IngestResponse
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +39,9 @@ def ingest_events(events: list[dict[str, Any]]):
         )
 
 
-@router.get("/retrieve", response_model=RetrieveResponse)
+@router.get("/retrieve", response_model=list[NewsEvent])
 def retrieve_events():
     """Return all stored events"""
     logger.info(f"Retrieved {len(events_storage)} events")
     
-    return RetrieveResponse(
-        events=events_storage,
-        total_count=len(events_storage)
-    )
+    return events_storage
