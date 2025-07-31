@@ -5,6 +5,7 @@ from src.api import routes
 from datetime import datetime
 
 
+
 @pytest.fixture(autouse=True)
 def clear_storage():
     """Clear the events storage before each test to prevent data accumulation"""

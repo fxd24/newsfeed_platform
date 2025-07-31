@@ -1,0 +1,229 @@
+from abc import ABC, abstractmethod
+from typing import Optional
+from src.models.domain import NewsEvent
+
+import logging
+import chromadb
+from chromadb.config import Settings
+
+logger = logging.getLogger(__name__)
+
+class NewsEventRepository(ABC):
+    """Abstract base repository for news events"""
+    
+    @abstractmethod
+    def create_events(self, events: list[NewsEvent]) -> None:
+        """Store a batch of news events"""
+        pass
+    
+    @abstractmethod
+    def get_all_events(self) -> list[NewsEvent]:
+        """Retrieve all stored events"""
+        pass
+    
+    @abstractmethod
+    def get_event_by_id(self, event_id: str) -> Optional[NewsEvent]:
+        """Retrieve a single event by ID"""
+        pass
+    
+    @abstractmethod
+    def count_events(self) -> int:
+        """Count total number of stored events"""
+        pass
+    
+    @abstractmethod
+    def delete_all_events(self) -> None:
+        """Delete all events (useful for testing)"""
+        pass
+
+
+class InMemoryNewsEventRepository(NewsEventRepository):
+    """In-memory implementation of news event repository"""
+    
+    def __init__(self):
+        self._events: list[NewsEvent] = []
+        self._events_by_id: dict[str, NewsEvent] = {}
+    
+    def create_events(self, events: list[NewsEvent]) -> None:
+        """Store a batch of news events"""
+        for event in events:
+            # Avoid duplicates based on ID
+            if event.id not in self._events_by_id:
+                self._events.append(event)
+                self._events_by_id[event.id] = event
+                logger.debug(f"Stored event: {event.id}")
+            else:
+                logger.debug(f"Event {event.id} already exists, skipping")
+        
+        logger.info(f"Stored {len(events)} events, total: {len(self._events)}")
+    
+    def get_all_events(self) -> list[NewsEvent]:
+        """Retrieve all stored events"""
+        return self._events.copy()  # Return copy to prevent external modification
+    
+    def get_event_by_id(self, event_id: str) -> Optional[NewsEvent]:
+        """Retrieve a single event by ID"""
+        return self._events_by_id.get(event_id)
+    
+    def count_events(self) -> int:
+        """Count total number of stored events"""
+        return len(self._events)
+    
+    def delete_all_events(self) -> None:
+        """Delete all events (useful for testing)"""
+        self._events.clear()
+        self._events_by_id.clear()
+        logger.info("Deleted all events")
+
+
+class ChromaDBNewsEventRepository(NewsEventRepository):
+    """ChromaDB implementation of news event repository"""
+    
+    def __init__(self, persist_directory: str = "./data/chromadb"):
+        """Initialize ChromaDB client and collection"""
+        try:
+            self.client = chromadb.PersistentClient(
+                path=persist_directory,
+                settings=Settings(anonymized_telemetry=False)
+            )
+            
+            # Get or create collection
+            self.collection = self.client.get_or_create_collection(
+                name="news_events",
+                metadata={"hnsw:space": "cosine"}
+            )
+            
+            logger.info(f"ChromaDB initialized with {self.collection.count()} existing events")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize ChromaDB: {e}")
+            raise
+    
+    def create_events(self, events: list[NewsEvent]) -> None:
+        """Store a batch of news events in ChromaDB"""
+        if not events:
+            return
+        
+        try:
+            # Prepare data for ChromaDB
+            ids = [event.id for event in events]
+            documents = [f"{event.title} {event.body}".strip() for event in events]
+            metadatas = [
+                {
+                    "source": event.source,
+                    "title": event.title,
+                    "body": event.body,
+                    "published_at": event.published_at.isoformat(),
+                }
+                for event in events
+            ]
+            
+            # Upsert to ChromaDB (handles duplicates automatically)
+            self.collection.upsert(
+                ids=ids,
+                documents=documents,
+                metadatas=metadatas
+            )
+            
+            logger.info(f"Stored {len(events)} events in ChromaDB")
+            
+        except Exception as e:
+            logger.error(f"Failed to store events in ChromaDB: {e}")
+            raise
+    
+    def get_all_events(self) -> list[NewsEvent]:
+        """Retrieve all stored events from ChromaDB"""
+        try:
+            result = self.collection.get()
+            
+            events = []
+            for i, event_id in enumerate(result["ids"]):
+                metadata = result["metadatas"][i]
+                
+                event = NewsEvent(
+                    id=event_id,
+                    source=metadata["source"],
+                    title=metadata["title"],
+                    body=metadata.get("body", ""),
+                    published_at=metadata["published_at"]
+                )
+                events.append(event)
+            
+            logger.info(f"Retrieved {len(events)} events from ChromaDB")
+            return events
+            
+        except Exception as e:
+            logger.error(f"Failed to retrieve events from ChromaDB: {e}")
+            raise
+    
+    def get_event_by_id(self, event_id: str) -> Optional[NewsEvent]:
+        """Retrieve a single event by ID from ChromaDB"""
+        try:
+            result = self.collection.get(ids=[event_id])
+            
+            if not result["ids"]:
+                return None
+            
+            metadata = result["metadatas"][0]
+            return NewsEvent(
+                id=event_id,
+                source=metadata["source"],
+                title=metadata["title"],
+                body=metadata.get("body", ""),
+                published_at=metadata["published_at"]
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to retrieve event {event_id} from ChromaDB: {e}")
+            return None
+    
+    def count_events(self) -> int:
+        """Count total number of stored events in ChromaDB"""
+        try:
+            return self.collection.count()
+        except Exception as e:
+            logger.error(f"Failed to count events in ChromaDB: {e}")
+            return 0
+    
+    def delete_all_events(self) -> None:
+        """Delete all events from ChromaDB (useful for testing)"""
+        try:
+            # ChromaDB doesn't have a direct "clear all" method
+            # So we get all IDs and delete them
+            result = self.collection.get()
+            if result["ids"]:
+                self.collection.delete(ids=result["ids"])
+            
+            logger.info("Deleted all events from ChromaDB")
+            
+        except Exception as e:
+            logger.error(f"Failed to delete all events from ChromaDB: {e}")
+            raise
+    
+    def search_events(self, query: str, limit: int = 10) -> list[NewsEvent]:
+        """Semantic search for events (ChromaDB-specific method)"""
+        try:
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=limit
+            )
+            
+            events = []
+            for i, event_id in enumerate(results["ids"][0]):
+                metadata = results["metadatas"][0][i]
+                
+                event = NewsEvent(
+                    id=event_id,
+                    source=metadata["source"],
+                    title=metadata["title"],
+                    body=metadata.get("body", ""),
+                    published_at=metadata["published_at"]
+                )
+                events.append(event)
+            
+            logger.info(f"Found {len(events)} events for query: '{query}'")
+            return events
+            
+        except Exception as e:
+            logger.error(f"Failed to search events in ChromaDB: {e}")
+            return []
