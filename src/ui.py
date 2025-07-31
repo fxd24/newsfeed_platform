@@ -3,7 +3,6 @@ import requests
 import json
 import pandas as pd
 from datetime import datetime
-import time
 
 # Configuration
 API_BASE_URL = "http://localhost:8000"
@@ -185,7 +184,7 @@ def show_retrieve_section():
                             try:
                                 pub_date = datetime.fromisoformat(event['published_at'].replace('Z', '+00:00'))
                                 st.markdown(f"**Date:** {pub_date.strftime('%Y-%m-%d %H:%M')}")
-                            except:
+                            except (ValueError, TypeError):
                                 st.markdown(f"**Date:** {event['published_at']}")
                         
                         # Title
