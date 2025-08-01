@@ -306,6 +306,62 @@ class BaseAPITestCase:
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, dict)
+    
+    def test_admin_poll_all_sources(self, client):
+        """Test admin poll all sources endpoint"""
+        response = client.post("/admin/poll/all")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "Polling all sources completed" in data["message"]
+    
+    def test_admin_poll_specific_source(self, client):
+        """Test admin poll specific source endpoint"""
+        # Test with a non-existent source
+        response = client.post("/admin/poll/nonexistent_source")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "no events returned" in data["message"]
+    
+    def test_error_handling_missing_components(self, client):
+        """Test error handling when components are not initialized"""
+        # Temporarily remove components from app state
+        original_repository = app.state.repository
+        original_ingestion_service = app.state.ingestion_service
+        original_source_manager = app.state.source_manager
+        original_scheduler_manager = app.state.scheduler_manager
+        
+        try:
+            # Remove components to test error handling
+            del app.state.repository
+            del app.state.ingestion_service
+            del app.state.source_manager
+            del app.state.scheduler_manager
+            
+            # Test that endpoints return 500 when components are missing
+            response = client.get("/retrieve")
+            assert response.status_code == 500
+            assert "Repository not initialized" in response.json()["detail"]
+            
+            response = client.post("/ingest", json=[])
+            assert response.status_code == 500
+            assert "Ingestion service not initialized" in response.json()["detail"]
+            
+            response = client.get("/admin/sources")
+            assert response.status_code == 500
+            assert "Source manager not initialized" in response.json()["detail"]
+            
+            response = client.post("/admin/poll/all")
+            assert response.status_code == 500
+            assert "Scheduler manager not initialized" in response.json()["detail"]
+            
+        finally:
+            # Restore components
+            app.state.repository = original_repository
+            app.state.ingestion_service = original_ingestion_service
+            app.state.source_manager = original_source_manager
+            app.state.scheduler_manager = original_scheduler_manager
 
 
 class TestAPIWithInMemoryRepository(BaseAPITestCase):
