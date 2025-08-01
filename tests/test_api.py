@@ -8,17 +8,9 @@ from src.repositories.news_event_repository import InMemoryNewsEventRepository, 
 
 
 class BaseAPITestCase:
-    """Base test class with common test methods"""
+    """Base test class with common test methods for both repository types"""
     
-    def setup_repository(self):
-        """Set up the repository for testing - to be implemented by subclasses"""
-        raise NotImplementedError
-    
-    def teardown_repository(self):
-        """Clean up the repository after testing - to be implemented by subclasses"""
-        raise NotImplementedError
-    
-    def setup_app_state(self):
+    def setup_app_state(self, repository):
         """Set up the app state with required components"""
         from src.services import IngestionService
         from src.sources.factory import SourceManager
@@ -26,8 +18,8 @@ class BaseAPITestCase:
         from src.config import ConfigManager
         
         # Create components
-        self.repository = self.create_repository()
-        self.ingestion_service = IngestionService(self.repository)
+        self.repository = repository
+        self.ingestion_service = IngestionService(repository)
         self.source_manager = SourceManager()
         self.scheduler_manager = SchedulerManager(self.source_manager, self.ingestion_service)
         self.config_manager = ConfigManager()
@@ -39,15 +31,10 @@ class BaseAPITestCase:
         app.state.scheduler_manager = self.scheduler_manager
         app.state.config_manager = self.config_manager
     
-    def create_repository(self):
-        """Create repository - to be implemented by subclasses"""
-        raise NotImplementedError
-    
     @pytest.fixture(autouse=True)
     def setup_and_teardown(self):
         """Setup and teardown for each test"""
-        self.setup_app_state()
-        self.setup_repository()
+        self.setup_app_state(self.create_repository())
         yield
         self.teardown_repository()
     
@@ -86,6 +73,14 @@ class BaseAPITestCase:
                 # Missing required fields: title, published_at
             }
         ]
+    
+    def create_repository(self):
+        """Create repository - to be implemented by subclasses"""
+        raise NotImplementedError
+    
+    def teardown_repository(self):
+        """Clean up the repository after testing - to be implemented by subclasses"""
+        raise NotImplementedError
     
     def test_health_endpoint(self, client):
         """Test that the health endpoint returns the expected response"""
@@ -279,6 +274,38 @@ class BaseAPITestCase:
         data = response.json()
         assert "detail" in data
         assert "Invalid event format" in data["detail"]
+    
+    def test_admin_endpoints(self, client):
+        """Test admin endpoints"""
+        # Test admin status
+        response = client.get("/admin/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert "scheduler" in data
+        assert "sources" in data
+        assert "configuration" in data
+        
+        # Test admin sources
+        response = client.get("/admin/sources")
+        assert response.status_code == 200
+        data = response.json()
+        assert "sources" in data
+        assert "enabled_count" in data
+        assert "total_count" in data
+        
+        # Test admin scheduler
+        response = client.get("/admin/scheduler")
+        assert response.status_code == 200
+        data = response.json()
+        assert "running" in data
+        assert "job_count" in data
+        assert "job_status" in data
+        
+        # Test admin stats
+        response = client.get("/admin/stats")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, dict)
 
 
 class TestAPIWithInMemoryRepository(BaseAPITestCase):
@@ -287,11 +314,6 @@ class TestAPIWithInMemoryRepository(BaseAPITestCase):
     def create_repository(self):
         """Create in-memory repository for testing"""
         return InMemoryNewsEventRepository()
-    
-    def setup_repository(self):
-        """Set up the in-memory repository for testing"""
-        # Repository is already created in setup_app_state # TODO
-        pass
     
     def teardown_repository(self):
         """Clean up the in-memory repository after testing"""
@@ -308,11 +330,6 @@ class TestAPIWithChromaDBRepository(BaseAPITestCase):
         self.temp_dir = tempfile.mkdtemp(prefix="test_chromadb_")
         return ChromaDBNewsEventRepository(persist_directory=self.temp_dir)
     
-    def setup_repository(self):
-        """Set up the ChromaDB repository for testing"""
-        # Repository is already created in setup_app_state
-        pass
-    
     def teardown_repository(self):
         """Clean up the ChromaDB repository after testing"""
         if hasattr(self, 'repository') and self.repository:
@@ -323,77 +340,117 @@ class TestAPIWithChromaDBRepository(BaseAPITestCase):
             shutil.rmtree(self.temp_dir)
 
 
-# # Alternative approach using pytest parametrization
-# @pytest.mark.parametrize("repository_type", ["memory", "chromadb"])
-# class TestAPIParametrized:
-#     """Parametrized tests for both repository types"""
+# Alternative approach using pytest parametrization for comprehensive testing
+@pytest.mark.parametrize("repository_type", ["memory", "chromadb"])
+class TestAPIParametrized:
+    """Parametrized tests for both repository types - comprehensive coverage"""
     
-#     @pytest.fixture(autouse=True)
-#     def setup_repository(self, repository_type):
-#         """Set up the repository based on the parameter"""
-#         if repository_type == "chromadb":
-#             # Create a temporary directory for ChromaDB
-#             self.temp_dir = tempfile.mkdtemp(prefix="test_chromadb_")
-#             app.state.repository = ChromaDBNewsEventRepository(persist_directory=self.temp_dir)
-#         else:
-#             app.state.repository = InMemoryNewsEventRepository()
+    @pytest.fixture(autouse=True)
+    def setup_repository(self, repository_type):
+        """Set up the repository based on the parameter"""
+        from src.services import IngestionService
+        from src.sources.factory import SourceManager
+        from src.scheduler import SchedulerManager
+        from src.config import ConfigManager
         
-#         yield
+        if repository_type == "chromadb":
+            # Create a temporary directory for ChromaDB
+            self.temp_dir = tempfile.mkdtemp(prefix="test_chromadb_")
+            repository = ChromaDBNewsEventRepository(persist_directory=self.temp_dir)
+        else:
+            repository = InMemoryNewsEventRepository()
         
-#         # Cleanup
-#         if hasattr(app.state, 'repository') and app.state.repository:
-#             app.state.repository.delete_all_events()
+        # Create services
+        ingestion_service = IngestionService(repository)
+        source_manager = SourceManager()
+        scheduler_manager = SchedulerManager(source_manager, ingestion_service)
+        config_manager = ConfigManager()
         
-#         # Remove temporary directory for ChromaDB
-#         if repository_type == "chromadb" and hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
-#             shutil.rmtree(self.temp_dir)
+        # Set up app state
+        app.state.repository = repository
+        app.state.ingestion_service = ingestion_service
+        app.state.source_manager = source_manager
+        app.state.scheduler_manager = scheduler_manager
+        app.state.config_manager = config_manager
+        
+        self.repository = repository
+        
+        yield
+        
+        # Cleanup
+        if hasattr(self, 'repository') and self.repository:
+            self.repository.delete_all_events()
+        
+        # Remove temporary directory for ChromaDB
+        if repository_type == "chromadb" and hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
     
-#     @pytest.fixture
-#     def client(self):
-#         """Create a test client for the FastAPI app"""
-#         return TestClient(app)
+    @pytest.fixture
+    def client(self):
+        """Create a test client for the FastAPI app"""
+        return TestClient(app)
     
-#     @pytest.fixture
-#     def sample_events(self):
-#         """Sample news events for testing"""
-#         return [
-#             {
-#                 "id": "event-1",
-#                 "source": "TechCrunch",
-#                 "title": "AI Breakthrough in Machine Learning",
-#                 "body": "Researchers discover new algorithm that improves accuracy by 20%",
-#                 "published_at": "2024-01-15T10:30:00Z"
-#             },
-#             {
-#                 "id": "event-2", 
-#                 "source": "Reuters",
-#                 "title": "Global Tech Market Update",
-#                 "body": "Tech stocks show strong performance in Q1",
-#                 "published_at": "2024-01-15T14:45:00Z"
-#             }
-#         ]
+    @pytest.fixture
+    def sample_events(self):
+        """Sample news events for testing"""
+        return [
+            {
+                "id": "event-1",
+                "source": "TechCrunch",
+                "title": "AI Breakthrough in Machine Learning",
+                "body": "Researchers discover new algorithm that improves accuracy by 20%",
+                "published_at": "2024-01-15T10:30:00Z"
+            },
+            {
+                "id": "event-2", 
+                "source": "Reuters",
+                "title": "Global Tech Market Update",
+                "body": "Tech stocks show strong performance in Q1",
+                "published_at": "2024-01-15T14:45:00Z"
+            }
+        ]
     
-#     def test_ingest_and_retrieve(self, client, sample_events, repository_type):
-#         """Test basic ingest and retrieve functionality"""
-#         # Ingest events
-#         ingest_response = client.post("/ingest", json=sample_events)
-#         assert ingest_response.status_code == 200
+    def test_ingest_and_retrieve(self, client, sample_events, repository_type):
+        """Test basic ingest and retrieve functionality"""
+        # Ingest events
+        ingest_response = client.post("/ingest", json=sample_events)
+        assert ingest_response.status_code == 200
         
-#         # Retrieve events
-#         retrieve_response = client.get("/retrieve")
-#         assert retrieve_response.status_code == 200
+        # Retrieve events
+        retrieve_response = client.get("/retrieve")
+        assert retrieve_response.status_code == 200
         
-#         # Verify data
-#         events = retrieve_response.json()
-#         assert len(events) == 2
+        # Verify data
+        events = retrieve_response.json()
+        assert len(events) == 2
         
-#         # Log which repository type was used
-#         print(f"\nTested with {repository_type} repository")
+        # Log which repository type was used
+        print(f"\nTested with {repository_type} repository")
     
-#     def test_health_endpoint(self, client, repository_type):
-#         """Test health endpoint"""
-#         response = client.get("/health")
-#         assert response.status_code == 200
-#         data = response.json()
-#         assert data["status"] == "healthy"
-#         print(f"\nHealth test with {repository_type} repository")
+    def test_health_endpoint(self, client, repository_type):
+        """Test health endpoint"""
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        print(f"\nHealth test with {repository_type} repository")
+    
+    def test_admin_endpoints(self, client, repository_type):
+        """Test admin endpoints with both repository types"""
+        # Test admin status
+        response = client.get("/admin/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert "scheduler" in data
+        assert "sources" in data
+        assert "configuration" in data
+        
+        # Test admin sources
+        response = client.get("/admin/sources")
+        assert response.status_code == 200
+        data = response.json()
+        assert "sources" in data
+        assert "enabled_count" in data
+        assert "total_count" in data
+        
+        print(f"\nAdmin endpoints test with {repository_type} repository")

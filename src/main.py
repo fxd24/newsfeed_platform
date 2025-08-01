@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 import logging
 import os
@@ -173,9 +173,11 @@ async def health_check():
 
 
 @app.get("/admin/status")
-async def admin_status():
+async def admin_status(request: Request):
     """Admin status endpoint with detailed information"""
-    global scheduler_manager, source_manager, config_manager
+    scheduler_manager = getattr(request.app.state, 'scheduler_manager', None)
+    source_manager = getattr(request.app.state, 'source_manager', None)
+    config_manager = getattr(request.app.state, 'config_manager', None)
     
     if not all([scheduler_manager, source_manager, config_manager]):
         return {"error": "Components not initialized"}
