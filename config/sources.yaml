@@ -1,0 +1,94 @@
+# Newsfeed Platform Configuration
+# This file configures the sources that the platform will poll for news events
+
+global:
+  # Global settings
+  default_poll_interval: 300  # 5 minutes
+  max_retries: 3
+  timeout: 30
+
+sources:
+  # GitHub Status Page
+  github_status:
+    enabled: true
+    poll_interval: 300  # 5 minutes
+    source_type: "json_api"
+    adapter_class: "GitHubStatusAdapter"
+    url: "https://www.githubstatus.com/api/v2/incidents.json"
+    headers:
+      User-Agent: "Newsfeed-Platform/1.0"
+
+  # AWS Status Page
+  aws_status:
+    enabled: true
+    poll_interval: 300  # 5 minutes
+    source_type: "json_api"
+    adapter_class: "AWSStatusAdapter"
+    url: "https://status.aws.amazon.com/data.json"
+    headers:
+      User-Agent: "Newsfeed-Platform/1.0"
+
+  # HackerNews Top Stories
+  hackernews:
+    enabled: true
+    poll_interval: 600  # 10 minutes
+    source_type: "json_api"
+    adapter_class: "HackerNewsAdapter"
+    url: "https://hacker-news.firebaseio.com/v0/topstories.json"
+    adapter_config:
+      max_items: 10
+
+  # Example: Generic Status Page (Cloudflare)
+  cloudflare_status:
+    enabled: false  # Disabled by default
+    poll_interval: 300
+    source_type: "json_api"
+    adapter_class: "GenericStatusAdapter"
+    url: "https://www.cloudflarestatus.com/api/v2/incidents.json"
+    adapter_config:
+      source_name: "Cloudflare Status"
+      incidents_path: "incidents"
+      id_field: "id"
+      title_field: "name"
+      body_field: "body"
+      date_field: "created_at"
+
+  # Example: RSS Feed
+  techcrunch_rss:
+    enabled: false  # Disabled by default
+    poll_interval: 900  # 15 minutes
+    source_type: "rss"
+    adapter_class: "RSSAdapter"
+    url: "https://techcrunch.com/feed/"
+    adapter_config:
+      source_name: "TechCrunch"
+
+  # Example: Another Generic Status Page
+  atlassian_status:
+    enabled: false  # Disabled by default
+    poll_interval: 300
+    source_type: "json_api"
+    adapter_class: "GenericStatusAdapter"
+    url: "https://status.atlassian.com/api/v2/incidents.json"
+    adapter_config:
+      source_name: "Atlassian Status"
+      incidents_path: "incidents"
+      id_field: "id"
+      title_field: "name"
+      body_field: "body"
+      date_field: "created_at"
+
+  # Example: Custom Status Page with different structure
+  custom_status_page:
+    enabled: false  # Disabled by default
+    poll_interval: 300
+    source_type: "json_api"
+    adapter_class: "GenericStatusAdapter"
+    url: "https://api.example.com/status/incidents"
+    adapter_config:
+      source_name: "Custom Service"
+      incidents_path: "data.incidents"  # Nested path
+      id_field: "incident_id"
+      title_field: "incident_title"
+      body_field: "incident_description"
+      date_field: "reported_at" 
