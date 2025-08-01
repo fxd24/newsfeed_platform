@@ -18,9 +18,35 @@ class BaseAPITestCase:
         """Clean up the repository after testing - to be implemented by subclasses"""
         raise NotImplementedError
     
+    def setup_app_state(self):
+        """Set up the app state with required components"""
+        from src.services import IngestionService
+        from src.sources.factory import SourceManager
+        from src.scheduler import SchedulerManager
+        from src.config import ConfigManager
+        
+        # Create components
+        self.repository = self.create_repository()
+        self.ingestion_service = IngestionService(self.repository)
+        self.source_manager = SourceManager()
+        self.scheduler_manager = SchedulerManager(self.source_manager, self.ingestion_service)
+        self.config_manager = ConfigManager()
+        
+        # Set up app state
+        app.state.repository = self.repository
+        app.state.ingestion_service = self.ingestion_service
+        app.state.source_manager = self.source_manager
+        app.state.scheduler_manager = self.scheduler_manager
+        app.state.config_manager = self.config_manager
+    
+    def create_repository(self):
+        """Create repository - to be implemented by subclasses"""
+        raise NotImplementedError
+    
     @pytest.fixture(autouse=True)
     def setup_and_teardown(self):
         """Setup and teardown for each test"""
+        self.setup_app_state()
         self.setup_repository()
         yield
         self.teardown_repository()
@@ -103,7 +129,7 @@ class BaseAPITestCase:
         # Assert the response structure
         data = response.json()
         assert data["status"] == "ok"
-        assert data["message"] == "Successfully stored 2 events"
+        assert "Successfully ingested 2 events" in data["message"]
         
         # Assert the response has the correct content type
         assert response.headers["content-type"] == "application/json"
@@ -130,7 +156,7 @@ class BaseAPITestCase:
         # Assert the response structure
         data = response.json()
         assert data["status"] == "ok"
-        assert data["message"] == "Successfully stored 0 events"
+        assert "Successfully ingested 0 events" in data["message"]
     
     def test_ingest_single_event(self, client):
         """Test ingestion of a single event"""
@@ -150,7 +176,7 @@ class BaseAPITestCase:
         # Assert the response structure
         data = response.json()
         assert data["status"] == "ok"
-        assert data["message"] == "Successfully stored 1 events"
+        assert "Successfully ingested 1 events" in data["message"]
     
     def test_retrieve_events_empty(self, client):
         """Test retrieving events when storage is empty"""
@@ -258,29 +284,39 @@ class BaseAPITestCase:
 class TestAPIWithInMemoryRepository(BaseAPITestCase):
     """Test API with InMemoryNewsEventRepository"""
     
+    def create_repository(self):
+        """Create in-memory repository for testing"""
+        return InMemoryNewsEventRepository()
+    
     def setup_repository(self):
         """Set up the in-memory repository for testing"""
-        app.state.repository = InMemoryNewsEventRepository()
+        # Repository is already created in setup_app_state # TODO
+        pass
     
     def teardown_repository(self):
         """Clean up the in-memory repository after testing"""
-        if hasattr(app.state, 'repository') and app.state.repository:
-            app.state.repository.delete_all_events()
+        if hasattr(self, 'repository') and self.repository:
+            self.repository.delete_all_events()
 
 
 class TestAPIWithChromaDBRepository(BaseAPITestCase):
     """Test API with ChromaDBNewsEventRepository"""
     
-    def setup_repository(self):
-        """Set up the ChromaDB repository for testing"""
+    def create_repository(self):
+        """Create ChromaDB repository for testing"""
         # Create a temporary directory for ChromaDB
         self.temp_dir = tempfile.mkdtemp(prefix="test_chromadb_")
-        app.state.repository = ChromaDBNewsEventRepository(persist_directory=self.temp_dir)
+        return ChromaDBNewsEventRepository(persist_directory=self.temp_dir)
+    
+    def setup_repository(self):
+        """Set up the ChromaDB repository for testing"""
+        # Repository is already created in setup_app_state
+        pass
     
     def teardown_repository(self):
         """Clean up the ChromaDB repository after testing"""
-        if hasattr(app.state, 'repository') and app.state.repository:
-            app.state.repository.delete_all_events()
+        if hasattr(self, 'repository') and self.repository:
+            self.repository.delete_all_events()
         
         # Remove the temporary directory
         if hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
