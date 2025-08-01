@@ -1,127 +1,231 @@
-# **IT News Aggregation Platform**
+# IT Newsfeed Platform
 
-A scalable, real-time newsfeed platform that aggregates and filters IT-related events from multiple public sources, providing ranked and searchable news specifically relevant to IT managers. This project is a response to the Nexthink AI Engineer take-home assessment.
+A real-time IT news aggregation and filtering system with configurable sources, built with FastAPI and ChromaDB.
 
-## **Overview**
+## 🏗️ Architecture
 
-This system is architected to continuously fetch IT-related news, apply intelligent filtering to isolate high-signal content (major outages, CVEs, etc.), and store events in a persistent, searchable vector database. A key feature is the asynchronous processing pipeline, which generates text embeddings for semantic search without blocking ingestion requests. The platform exposes a clean REST API for both ingestion and retrieval, with dynamic ranking capabilities.
+The platform uses a **Strategy + Adapter pattern** for maximum flexibility:
 
-## **Key Features**
+- **Strategy Pattern**: Different data fetchers (JSON API, RSS, etc.)
+- **Adapter Pattern**: Source-specific data transformers
+- **Factory Pattern**: Easy source creation from configuration
+- **APScheduler**: Background polling with configurable intervals
 
-* **Asynchronous Ingestion:** The `/ingest` endpoint provides immediate acknowledgment by delegating heavy processing (like embedding generation) to background workers.
-* **Multi-Source Aggregation:** Extensible adapter pattern for various data sources (CISA KEV, vendor status pages, etc.).
-* **Intelligent Filtering:** A multi-factor scoring model filters content for IT manager relevance, minimizing false positives.
-* **Semantic Vector Search:** ChromaDB-powered similarity search using content embeddings with built-in persistence.
-* **Dynamic Ranking:** Balances importance and recency with configurable weights exposed via the API.
-* **Streamlit Web UI:** User-friendly interface for ingesting and retrieving news events with file upload support and real-time statistics.
-* **Production-Ready Practices:** Type-safe, tested, and scalable architecture using modern tools.
+### Core Components
 
-## **System Requirements**
-
-* Python 3.13+
-* 8GB RAM (recommended for embedding model processing)
-* ~500MB storage (for ChromaDB database and indices)
-
-**Core Dependencies:** FastAPI, Pydantic, ChromaDB, Sentence-Transformers, Ruff, pytest.
-
-## **Installation**
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd newsfeed_platform
-
-# Install dependencies using uv (recommended)
-uv sync
-
-# Activate the virtual environment
-source .venv/bin/activate
+```
+┌─────────────────────────────────────────┐
+│ APScheduler + FastAPI Routes            │  ← Orchestration
+├─────────────────────────────────────────┤
+│ SourceManager + IngestionService        │  ← Business Logic  
+├─────────────────────────────────────────┤
+│ UniversalNewsSource                     │  ← Coordination
+├─────────────────────────────────────────┤
+│ DataFetcher (Strategy) | SourceAdapter  │  ← Transport + Transform
+├─────────────────────────────────────────┤
+│ ChromaDB Repository                     │  ← Persistence
+└─────────────────────────────────────────┘
 ```
 
-## **Quick Start**
+## 🚀 Features
 
-**1. Start the Server**
+- **Configurable Sources**: Add new sources via YAML configuration
+- **Multiple Data Formats**: JSON APIs, RSS feeds, custom adapters
+- **Background Polling**: Automatic data collection with APScheduler
+- **Unified Ingestion**: Same service handles polling and external API calls
+- **Admin Interface**: Monitor and control sources via REST API
+- **Production Ready**: Error handling, logging, health checks
 
-```bash
-# Run in development mode with auto-reload
-make dev
-# or
-uv run uvicorn src.main:app --reload
+## 📦 Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd newsfeed_platform
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -e .
+   ```
+
+3. **Run the application**:
+   ```bash
+   python -m src.main
+   ```
+
+The server will start on `http://localhost:8000`
+
+## ⚙️ Configuration
+
+Sources are configured via `config/sources.yaml`:
+
+```yaml
+sources:
+  github_status:
+    enabled: true
+    poll_interval: 300  # 5 minutes
+    source_type: "json_api"
+    adapter_class: "GitHubStatusAdapter"
+    url: "https://www.githubstatus.com/api/v2/incidents.json"
+    
+  hackernews:
+    enabled: true
+    poll_interval: 600  # 10 minutes
+    source_type: "json_api"
+    adapter_class: "HackerNewsAdapter"
+    url: "https://hacker-news.firebaseio.com/v0/topstories.json"
+    adapter_config:
+      max_items: 10
 ```
 
-**2. Start the Streamlit UI (Optional)**
+### Source Types
+
+- **JSON APIs**: `json_api` - Standard REST APIs
+- **RSS Feeds**: `rss` - RSS/Atom feeds
+- **Mock**: `mock` - For testing
+
+### Adapter Classes
+
+- **GitHubStatusAdapter**: GitHub Status Page
+- **AWSStatusAdapter**: AWS Status Page
+- **HackerNewsAdapter**: HackerNews API
+- **GenericStatusAdapter**: Configurable for any status page
+- **RSSAdapter**: RSS/Atom feeds
+
+## 🔌 API Endpoints
+
+### Core Endpoints
+
+- `POST /ingest` - Ingest events from external sources
+- `GET /retrieve` - Retrieve all stored events
+- `GET /health` - Health check
+
+### Admin Endpoints
+
+- `GET /admin/status` - Detailed system status
+- `GET /admin/sources` - Source status and configuration
+- `GET /admin/scheduler` - Scheduler status and jobs
+- `GET /admin/stats` - Ingestion statistics
+- `POST /admin/poll/all` - Manually poll all sources
+- `POST /admin/poll/{source_name}` - Manually poll specific source
+
+## 🧪 Testing
+
+Run the test suite:
 
 ```bash
-# Run the Streamlit UI in a separate terminal
-make ui
-# or
-uv run streamlit run src/ui.py --server.port 8501
+pytest tests/
 ```
 
-The UI will be available at `http://localhost:8501` and provides a user-friendly interface for:
-- **Ingest Events**: Upload JSON files or paste JSON directly to ingest news events
-- **Retrieve Events**: View all stored events in a readable format with statistics
-- **Health Check**: Verify API connectivity and status
+Run with coverage:
 
-**3. API Usage**
+```bash
+pytest tests/ --cov=src
+```
 
-* **Ingest Events**
+## 🔧 Adding New Sources
 
-  ```sh
-  curl -X POST "http://localhost:8000/ingest" \
-    -H "Content-Type: application/json" \
-    -d '[{"id": "cve-2024-1234", "source": "cisa-kev", "title": "Critical RCE Vulnerability", "body": "...", "published_at": "2025-07-30T10:00:00Z"}]'
-  ```
+### 1. Create an Adapter (if needed)
 
-* **Retrieve Filtered Events (Default Ranking)**
+```python
+from src.sources import SourceAdapter
+from src.models.domain import NewsEvent
 
-  ```sh
-  curl "http://localhost:8000/retrieve"
-  ```
+class MyServiceAdapter(SourceAdapter):
+    def adapt(self, raw_data: Any) -> List[NewsEvent]:
+        events = []
+        for item in raw_data['items']:
+            event = NewsEvent(
+                id=str(uuid.uuid4()),
+                source="My Service",
+                title=item['title'],
+                body=item['description'],
+                published_at=datetime.fromisoformat(item['date'])
+            )
+            events.append(event)
+        return events
+```
 
-* **Retrieve Filtered Events (Custom Ranking)**
+### 2. Register the Adapter
 
-  ```sh
-  curl "http://localhost:8000/retrieve?importance_weight=0.8&recency_weight=0.2"
-  ```
+```python
+from src.sources.factory import SourceFactory
 
-## **Architecture**
+factory = SourceFactory()
+factory.register_adapter('MyServiceAdapter', MyServiceAdapter)
+```
 
-The system uses a simplified, asynchronous pipeline with ChromaDB as the single source of truth for both persistence and vector search.
+### 3. Add Configuration
 
-**Core Design Patterns:**
+```yaml
+sources:
+  my_service:
+    enabled: true
+    poll_interval: 300
+    source_type: "json_api"
+    adapter_class: "MyServiceAdapter"
+    url: "https://api.myservice.com/status"
+```
 
-* **Adapter Pattern:** Handles various data source formats (JSON, RSS, etc.).
-* **Repository Pattern:** Abstracts ChromaDB operations, separating business logic from persistence.
-* **Background Task Processing:** Ensures ingestion API remains non-blocking.
+## 🏭 Production Deployment
 
-**Data Flow Pipeline:**
+### Environment Variables
 
-1. **Ingestion:** `/ingest` endpoint receives raw events, validates them with Pydantic models, and stores them in **ChromaDB** with a `status` of "processing". It immediately returns a `200 OK`.
-2. **Background Processing:** A `FastAPI.BackgroundTask` is triggered. It queries ChromaDB for unprocessed events using metadata filters.
-3. **Enhancement:** The background task generates embeddings, calculates an initial importance score, and updates the event's metadata in ChromaDB, changing its `status` to "processed".
-4. **Indexing:** ChromaDB automatically handles vector indexing and persistence - no separate index management needed.
-5. **Retrieval:** The `/retrieve` endpoint queries ChromaDB for processed events using metadata filters, applying the ranking logic (importance × recency) to the results before returning them.
+- `CONFIG_FILE`: Path to configuration file (default: `config/sources.yaml`)
+- `STORAGE_TYPE`: `memory` or `chromadb` (default: `memory`)
+- `CHROMA_DIR`: ChromaDB persistence directory (default: `./data/chromadb`)
 
-**Technology Stack:**
+### Docker Deployment
 
-* **API:** FastAPI
-* **Data Validation:** Pydantic v2
-* **Database & Vector Search:** ChromaDB (unified persistence and vector search)
-* **Embeddings:** Sentence-Transformers (`all-MiniLM-L6-v2` model)
-* **Code Quality:** Ruff 
-* **Testing:** pytest
+```dockerfile
+FROM python:3.13-slim
 
-## **Key Assumptions**
+WORKDIR /app
+COPY . .
 
-* **MVP Scope (4-10 hours):**
-    * **Asynchronous Processing:** Handled by `FastAPI.BackgroundTasks`, sufficient for the MVP. A full-scale solution would use Celery/Redis.
-    * **Single Database:** ChromaDB serves as both the source of truth for event data and the vector search engine, simplifying the architecture.
-    * **Single-Instance Deployment:** Designed for a single-node deployment.
-* **Content Filtering:**
-    * **Target Audience:** IT managers and security professionals.
-    * **Importance Algorithm:** Based on a weighted score from source credibility, keyword matching (e.g., "outage", "CVE"), and pattern detection (e.g., CVE identifiers).
-* **Ranking Algorithm:**
-    * **Formula:** `Final Score = (Importance Score * W_i) + (Recency Score * W_r)`
-    * **Default Weights:** Importance (70%), Recency (30%). These are configurable via API parameters.
-    * **Deterministic Tie-breaking:** In case of a score tie, items are sorted by `published_at` (desc) then `id` (asc) for stable ordering.
+RUN pip install -e .
+
+EXPOSE 8000
+
+CMD ["python", "-m", "src.main"]
+```
+
+## 📊 Monitoring
+
+The platform provides comprehensive monitoring:
+
+- **Health Checks**: `/health` endpoint
+- **Source Status**: `/admin/sources` shows enabled/disabled sources
+- **Scheduler Status**: `/admin/scheduler` shows polling job status
+- **Ingestion Stats**: `/admin/stats` shows event counts and rates
+
+## 🔄 Background Polling
+
+The platform automatically polls configured sources:
+
+- **GitHub Status**: Every 5 minutes
+- **HackerNews**: Every 10 minutes
+- **RSS Feeds**: Every 15 minutes
+- **Custom intervals**: Configurable per source
+
+## 🎯 Key Benefits
+
+- **Minimal Code**: New sources require only configuration
+- **High Reusability**: Same fetchers work across multiple sources
+- **Easy Extension**: Add sources without code changes
+- **Production Ready**: Error handling, retries, monitoring
+- **Type Safe**: Full type hints throughout
+- **Testable**: Each component tested in isolation
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
