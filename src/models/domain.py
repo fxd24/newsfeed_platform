@@ -11,6 +11,11 @@ class NewsType(str, Enum):
     SOFTWARE_BUG = "software_bug"
     UNKNOWN = "unknown"
 
+# TODO other news event types: possible. decide how to handle them. like just as other.
+# MAINTENANCE: For scheduled maintenance events
+# ANNOUNCEMENT: For general announcements
+# PERFORMANCE: For performance-related issues
+
 
 class NewsEvent(BaseModel):
     """Base news event model matching the API contract with extended fields"""
