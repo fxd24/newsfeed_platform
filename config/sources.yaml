@@ -91,4 +91,15 @@ sources:
       id_field: "incident_id"
       title_field: "incident_title"
       body_field: "incident_description"
-      date_field: "reported_at" 
+      date_field: "reported_at"
+
+  # GitHub Security Advisories
+  github_security_advisories:
+    enabled: true
+    poll_interval: 1800  # 30 minutes (GitHub has rate limits)
+    source_type: "json_api"
+    adapter_class: "GitHubSecurityAdvisoriesAdapter"
+    url: "https://api.github.com/advisories"
+    headers:
+      User-Agent: "Newsfeed-Platform/1.0"
+      Accept: "application/vnd.github.v3+json" 

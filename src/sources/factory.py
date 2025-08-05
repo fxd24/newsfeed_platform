@@ -12,7 +12,7 @@ from src.sources import UniversalNewsSource, SourceConfig, SourceAdapter, DataFe
 from src.sources.fetchers import JSONAPIFetcher, RSSFetcher, MockFetcher
 from src.sources.adapters import (
     GitHubStatusAdapter, AWSStatusAdapter, HackerNewsAdapter,
-    GenericStatusAdapter, RSSAdapter
+    GenericStatusAdapter, RSSAdapter, GitHubSecurityAdvisoriesAdapter
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class SourceFactory:
             'HackerNewsAdapter': HackerNewsAdapter,
             'GenericStatusAdapter': GenericStatusAdapter,
             'RSSAdapter': RSSAdapter,
+            'GitHubSecurityAdvisoriesAdapter': GitHubSecurityAdvisoriesAdapter,
             'GenericAdapter': GenericStatusAdapter  # Alias for backward compatibility
         }
     
