@@ -18,15 +18,7 @@ sources:
     headers:
       User-Agent: "Newsfeed-Platform/1.0"
 
-  # AWS Status Page
-  aws_status:
-    enabled: true
-    poll_interval: 300  # 5 minutes
-    source_type: "json_api"
-    adapter_class: "AWSStatusAdapter"
-    url: "https://status.aws.amazon.com/data.json"
-    headers:
-      User-Agent: "Newsfeed-Platform/1.0"
+
 
   # HackerNews Top Stories
   hackernews:

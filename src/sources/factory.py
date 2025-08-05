@@ -11,7 +11,7 @@ from typing import Type, Any
 from src.sources import UniversalNewsSource, SourceConfig, SourceAdapter, DataFetcher
 from src.sources.fetchers import JSONAPIFetcher, RSSFetcher, MockFetcher
 from src.sources.adapters import (
-    GitHubStatusAdapter, AWSStatusAdapter, HackerNewsAdapter,
+    GitHubStatusAdapter, HackerNewsAdapter,
     GenericStatusAdapter, RSSAdapter, GitHubSecurityAdvisoriesAdapter
 )
 
@@ -30,7 +30,6 @@ class SourceFactory:
         
         self._adapter_registry: dict[str, Type[SourceAdapter]] = {
             'GitHubStatusAdapter': GitHubStatusAdapter,
-            'AWSStatusAdapter': AWSStatusAdapter,
             'HackerNewsAdapter': HackerNewsAdapter,
             'GenericStatusAdapter': GenericStatusAdapter,
             'RSSAdapter': RSSAdapter,

@@ -15,7 +15,7 @@ from src.models.domain import NewsEvent, NewsType
 
 logger = logging.getLogger(__name__)
 
-
+# TODO verify data format!
 class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
     """Adapter for GitHub Security Advisories API"""
     
@@ -24,13 +24,21 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
         events = []
         
         if not isinstance(raw_data, list):
-            logger.warning("Invalid GitHub Security Advisories data format - expected list")
+            logger.warning(f"Invalid GitHub Security Advisories data format - expected list, got {type(raw_data)}")
             return events
         
-        for advisory in raw_data:
+        for i, advisory in enumerate(raw_data):
             try:
+                # Ensure advisory is a dict
+                if not isinstance(advisory, dict):
+                    logger.warning(f"Advisory {i} is not a dict: {type(advisory)}")
+                    continue
+                
                 # Extract vulnerability information
                 vulnerability = advisory.get('vulnerability', {})
+                if not isinstance(vulnerability, dict):
+                    vulnerability = {}
+                
                 severity = vulnerability.get('severity', 'unknown')
                 
                 # Map GitHub severity to impact level
@@ -59,7 +67,7 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
                 events.append(event)
                 
             except Exception as e:
-                logger.error(f"Error processing GitHub Security Advisory: {e}")
+                logger.error(f"Error processing GitHub Security Advisory {i}: {e}")
                 continue
         
         return events
@@ -190,28 +198,36 @@ class GitHubStatusAdapter(SourceAdapter):
         return events
     
     def _create_incident_body(self, incident: dict) -> str:
-        """Create enriched body content with incident updates"""
+        """Create clean, searchable body content with incident updates"""
         body_parts = []
         
         # Add original body if available
         if incident.get('body'):
             body_parts.append(incident['body'])
         
-        # Add incident updates with timestamps
+        # Add incident updates in clean format
         updates = incident.get('incident_updates', [])
         if updates:
-            if body_parts:  # Only add separator if we have original body
-                body_parts.append("\nIncident Updates:")
             # Sort updates by created_at timestamp (most recent first)
             sorted_updates = sorted(updates, key=lambda x: x.get('created_at', ''), reverse=True)
             
             for update in sorted_updates:
-                created_at = update.get('created_at', 'Unknown time')
+                created_at = update.get('created_at', '')
                 status = update.get('status', 'Update')
                 body_text = update.get('body', 'No details provided')
                 
-                body_parts.append(f"\n[{created_at}] {status}:")
-                body_parts.append(body_text)
+                # Format: "2025-08-05T16:08:53.475Z | investigating | Webhooks is experiencing degraded performance"
+                if created_at:
+                    # Parse and format timestamp for readability
+                    try:
+                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
+                    except:
+                        formatted_time = created_at
+                else:
+                    formatted_time = "Unknown time"
+                
+                body_parts.append(f"{formatted_time} | {status} | {body_text}")
         
         return "\n".join(body_parts)
     
@@ -233,46 +249,7 @@ class GitHubStatusAdapter(SourceAdapter):
             return datetime.now()
 
 
-class AWSStatusAdapter(SourceAdapter):
-    """Adapter for AWS Status Page API"""
-    
-    def adapt(self, raw_data: Any) -> list[NewsEvent]:
-        """Transform AWS status data into NewsEvents"""
-        events = []
-        
-        if not isinstance(raw_data, dict) or 'events' not in raw_data:
-            logger.warning("Invalid AWS status data format")
-            return events
-        
-        for event_data in raw_data['events']:
-            try:
-                event = NewsEvent(
-                    id=str(uuid.uuid4()),
-                    source="AWS Status",
-                    title=event_data.get('summary', 'AWS Event'),
-                    body=event_data.get('description', ''),
-                    published_at=self._parse_aws_datetime(event_data.get('start_time')),
-                    news_type=NewsType.SERVICE_STATUS
-                )
-                events.append(event)
-                
-            except Exception as e:
-                logger.error(f"Error processing AWS event: {e}")
-                continue
-        
-        return events
-    
-    def _parse_aws_datetime(self, date_str: str) -> datetime:
-        """Parse AWS datetime format"""
-        if not date_str:
-            return datetime.now()
-        
-        try:
-            # AWS uses ISO 8601 format
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        except ValueError:
-            logger.warning(f"Could not parse AWS datetime: {date_str}")
-            return datetime.now()
+
 
 
 class HackerNewsAdapter(SourceAdapter):
@@ -290,15 +267,16 @@ class HackerNewsAdapter(SourceAdapter):
             return events
         
         # HackerNews API returns list of story IDs
-        # We'd need to fetch individual stories, but for now we'll create mock events
+        # For now, we'll create descriptive events since fetching individual stories requires additional API calls
         for i, story_id in enumerate(raw_data[:self.max_items]):
             try:      
                 event = NewsEvent(
                     id=str(uuid.uuid4()),
                     source="HackerNews",
-                    title=f"HackerNews Story #{story_id}",
-                    body=f"Top story from HackerNews with ID {story_id}",
+                    title=f"HackerNews Top Story #{story_id}",
+                    body=f"Popular story from HackerNews community. Story ID: {story_id}. This story has received significant attention from the HackerNews community and may contain relevant information for IT professionals.",
                     published_at=datetime.now(),
+                    url=f"https://news.ycombinator.com/item?id={story_id}",
                     news_type=NewsType.UNKNOWN
                 )
                 events.append(event)
@@ -381,28 +359,36 @@ class GenericStatusAdapter(SourceAdapter):
         return events
     
     def _create_incident_body(self, incident: dict, original_body: str) -> str:
-        """Create enriched body content with incident updates"""
+        """Create clean, searchable body content with incident updates"""
         body_parts = []
         
         # Add original body if available
         if original_body:
             body_parts.append(original_body)
         
-        # Add incident updates with timestamps
+        # Add incident updates in clean format
         updates = incident.get('incident_updates', [])
         if updates:
-            if body_parts:  # Only add separator if we have original body
-                body_parts.append("\nIncident Updates:")
             # Sort updates by created_at timestamp (most recent first)
             sorted_updates = sorted(updates, key=lambda x: x.get('created_at', ''), reverse=True)
             
             for update in sorted_updates:
-                created_at = update.get('created_at', 'Unknown time')
+                created_at = update.get('created_at', '')
                 status = update.get('status', 'Update')
                 body_text = update.get('body', 'No details provided')
                 
-                body_parts.append(f"\n[{created_at}] {status}:")
-                body_parts.append(body_text)
+                # Format: "2025-08-05T16:08:53.475Z | investigating | Webhooks is experiencing degraded performance"
+                if created_at:
+                    # Parse and format timestamp for readability
+                    try:
+                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
+                    except:
+                        formatted_time = created_at
+                else:
+                    formatted_time = "Unknown time"
+                
+                body_parts.append(f"{formatted_time} | {status} | {body_text}")
         
         return "\n".join(body_parts)
     
@@ -458,12 +444,15 @@ class RSSAdapter(SourceAdapter):
                 title = item.get('title', 'RSS Item')
                 body = item.get('description') or item.get('content', '')
                 date_str = item.get('pubDate') or item.get('published')
+                url = item.get('link') or item.get('url')
+                
                 event = NewsEvent(
                     id=str(uuid.uuid4()),
                     source=self.source_name,
                     title=title,
                     body=body,
                     published_at=self._parse_rss_datetime(date_str),
+                    url=url,
                     news_type=NewsType.UNKNOWN
                 )
                 events.append(event)
