@@ -1,20 +1,246 @@
 """
-Tests for source adapters.
+Tests for source adapters for transforming different source formats into NewsEvents.
 
-This module tests the various SourceAdapter implementations
-for transforming different source formats into NewsEvents.
+This module tests various SourceAdapter classes for handling
+different data formats from various news sources.
 """
 
 import pytest
 from datetime import datetime
+
 from src.sources.adapters import (
-    GitHubStatusAdapter,
-    AWSStatusAdapter,
-    HackerNewsAdapter,
-    GenericStatusAdapter,
-    RSSAdapter
+    GitHubStatusAdapter, AWSStatusAdapter, HackerNewsAdapter,
+    GenericStatusAdapter, RSSAdapter, GitHubSecurityAdvisoriesAdapter
 )
 from src.models.domain import NewsEvent
+
+
+class TestGitHubSecurityAdvisoriesAdapter:
+    """Test suite for GitHubSecurityAdvisoriesAdapter"""
+    
+    @pytest.fixture
+    def adapter(self):
+        return GitHubSecurityAdvisoriesAdapter()
+    
+    def test_adapt_valid_data(self, adapter):
+        """Test adapting valid GitHub Security Advisories data"""
+        raw_data = [
+            {
+                "summary": "Critical vulnerability in example-package",
+                "description": "A critical vulnerability has been discovered in example-package",
+                "published_at": "2024-01-15T10:30:00Z",
+                "state": "published",
+                "html_url": "https://github.com/advisories/GHSA-example",
+                "created_at": "2024-01-15T10:00:00Z",
+                "updated_at": "2024-01-15T10:30:00Z",
+                "vulnerability": {
+                    "severity": "critical",
+                    "cvss": {
+                        "score": 9.8
+                    }
+                },
+                "vulnerabilities": [
+                    {
+                        "package": {
+                            "name": "example-package",
+                            "ecosystem": "npm"
+                        }
+                    }
+                ],
+                "references": [
+                    {
+                        "url": "https://example.com/cve-2024-1234"
+                    }
+                ]
+            },
+            {
+                "summary": "High severity issue in another-package",
+                "description": "A high severity issue has been found",
+                "published_at": "2024-01-15T14:45:00Z",
+                "state": "published",
+                "html_url": "https://github.com/advisories/GHSA-example2",
+                "created_at": "2024-01-15T14:00:00Z",
+                "updated_at": "2024-01-15T14:45:00Z",
+                "vulnerability": {
+                    "severity": "high"
+                },
+                "vulnerabilities": [
+                    {
+                        "package": {
+                            "name": "another-package",
+                            "ecosystem": "pypi"
+                        }
+                    }
+                ]
+            }
+        ]
+        
+        events = adapter.adapt(raw_data)
+        
+        assert len(events) == 2
+        assert all(isinstance(event, NewsEvent) for event in events)
+        
+        # Check first event (critical severity)
+        assert events[0].source == "GitHub Security Advisories"
+        assert events[0].title == "Critical vulnerability in example-package"
+        assert events[0].status == "published"
+        assert events[0].impact_level == "critical"
+        assert events[0].url == "https://github.com/advisories/GHSA-example"
+        assert "example-package (npm)" in events[0].affected_components
+        assert "A critical vulnerability has been discovered" in events[0].body
+        assert "Severity: CRITICAL" in events[0].body
+        assert "CVSS Score: 9.8" in events[0].body
+        assert "example-package (npm)" in events[0].body
+        
+        # Check second event (high severity)
+        assert events[1].source == "GitHub Security Advisories"
+        assert events[1].title == "High severity issue in another-package"
+        assert events[1].status == "published"
+        assert events[1].impact_level == "major"  # high maps to major
+        assert events[1].url == "https://github.com/advisories/GHSA-example2"
+        assert "another-package (pypi)" in events[1].affected_components
+    
+    def test_adapt_invalid_data(self, adapter):
+        """Test adapting invalid data"""
+        # Test with non-list data
+        events = adapter.adapt({"not": "a list"})
+        assert len(events) == 0
+        
+        # Test with empty list
+        events = adapter.adapt([])
+        assert len(events) == 0
+    
+    def test_adapt_malformed_advisory(self, adapter):
+        """Test adapting malformed advisory data"""
+        raw_data = [
+            {
+                # Missing required fields
+                "summary": "Test advisory"
+            },
+            {
+                # Valid advisory
+                "summary": "Valid advisory",
+                "description": "Valid description",
+                "published_at": "2024-01-15T10:30:00Z",
+                "vulnerability": {
+                    "severity": "medium"
+                }
+            }
+        ]
+        
+        events = adapter.adapt(raw_data)
+        
+        # Should handle malformed data gracefully and still process valid ones
+        assert len(events) == 2  # Both are processed, malformed one has defaults
+        # Find the valid advisory
+        valid_event = next(event for event in events if event.title == "Valid advisory")
+        assert valid_event.impact_level == "minor"  # medium maps to minor
+    
+    def test_severity_mapping(self, adapter):
+        """Test severity to impact level mapping"""
+        test_cases = [
+            ("critical", "critical"),
+            ("high", "major"),
+            ("medium", "minor"),
+            ("low", "minor"),
+            ("unknown", "none"),
+            ("invalid", "none")
+        ]
+        
+        for severity, expected_impact in test_cases:
+            impact = adapter._map_severity_to_impact(severity)
+            assert impact == expected_impact
+    
+    def test_extract_affected_packages(self, adapter):
+        """Test extracting affected package names"""
+        advisory = {
+            "vulnerabilities": [
+                {
+                    "package": {
+                        "name": "package1",
+                        "ecosystem": "npm"
+                    }
+                },
+                {
+                    "package": {
+                        "name": "package2",
+                        "ecosystem": "pypi"
+                    }
+                },
+                {
+                    "package": {
+                        "name": "package3"
+                        # Missing ecosystem
+                    }
+                }
+            ]
+        }
+        
+        packages = adapter._extract_affected_packages(advisory)
+        assert len(packages) == 3
+        assert "package1 (npm)" in packages
+        assert "package2 (pypi)" in packages
+        assert "package3" in packages  # No ecosystem
+    
+    def test_create_advisory_body(self, adapter):
+        """Test creating detailed advisory body"""
+        advisory = {
+            "description": "Test vulnerability description",
+            "vulnerability": {
+                "severity": "high",
+                "cvss": {
+                    "score": 8.5
+                }
+            },
+            "vulnerabilities": [
+                {
+                    "package": {
+                        "name": "test-package",
+                        "ecosystem": "npm"
+                    }
+                }
+            ],
+            "references": [
+                {
+                    "url": "https://example.com/cve"
+                }
+            ]
+        }
+        
+        vulnerability = advisory["vulnerability"]
+        body = adapter._create_advisory_body(advisory, vulnerability)
+        
+        assert "Test vulnerability description" in body
+        assert "Severity: HIGH" in body
+        assert "CVSS Score: 8.5" in body
+        assert "test-package (npm)" in body
+        assert "https://example.com/cve" in body
+    
+    def test_parse_github_datetime_valid(self, adapter):
+        """Test parsing valid GitHub datetime"""
+        date_str = "2024-01-15T10:30:00Z"
+        result = adapter._parse_github_datetime(date_str)
+        
+        assert isinstance(result, datetime)
+        assert result.year == 2024
+        assert result.month == 1
+        assert result.day == 15
+        assert result.hour == 10
+        assert result.minute == 30
+    
+    def test_parse_github_datetime_invalid(self, adapter):
+        """Test parsing invalid GitHub datetime"""
+        # Invalid format
+        result = adapter._parse_github_datetime("invalid-date")
+        assert isinstance(result, datetime)
+        
+        # Empty string
+        result = adapter._parse_github_datetime("")
+        assert isinstance(result, datetime)
+        
+        # None
+        result = adapter._parse_github_datetime(None)
+        assert isinstance(result, datetime)
 
 
 class TestGitHubStatusAdapter:
