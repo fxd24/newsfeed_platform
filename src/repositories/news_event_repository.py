@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from src.models.domain import NewsEvent
+from datetime import datetime
+from src.models.domain import NewsEvent, NewsType
 
 import logging
 import chromadb
@@ -114,6 +115,16 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                     "title": event.title,
                     "body": event.body,
                     "published_at": event.published_at.isoformat(),
+                    "status": event.status,
+                    "impact_level": event.impact_level,
+                    "news_type": event.news_type.value if event.news_type else None,
+                    "url": event.url,
+                    "short_url": event.short_url,
+                    "affected_components": ", ".join(event.affected_components) if event.affected_components else None,
+                    "created_at": event.created_at.isoformat() if event.created_at else None,
+                    "updated_at": event.updated_at.isoformat() if event.updated_at else None,
+                    "resolved_at": event.resolved_at.isoformat() if event.resolved_at else None,
+                    "started_at": event.started_at.isoformat() if event.started_at else None,
                 }
                 for event in events
             ]
@@ -145,7 +156,17 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                     source=metadata["source"],
                     title=metadata["title"],
                     body=metadata.get("body", ""),
-                    published_at=metadata["published_at"]
+                    published_at=datetime.fromisoformat(metadata["published_at"]),
+                    status=metadata.get("status"),
+                    impact_level=metadata.get("impact_level"),
+                    news_type=NewsType(metadata.get("news_type")) if metadata.get("news_type") else NewsType.UNKNOWN,
+                    url=metadata.get("url"),
+                    short_url=metadata.get("short_url"),
+                    affected_components=metadata.get("affected_components").split(", ") if metadata.get("affected_components") else None,
+                    created_at=datetime.fromisoformat(metadata["created_at"]) if metadata.get("created_at") else None,
+                    updated_at=datetime.fromisoformat(metadata["updated_at"]) if metadata.get("updated_at") else None,
+                    resolved_at=datetime.fromisoformat(metadata["resolved_at"]) if metadata.get("resolved_at") else None,
+                    started_at=datetime.fromisoformat(metadata["started_at"]) if metadata.get("started_at") else None,
                 )
                 events.append(event)
             
@@ -170,7 +191,17 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                 source=metadata["source"],
                 title=metadata["title"],
                 body=metadata.get("body", ""),
-                published_at=metadata["published_at"]
+                published_at=datetime.fromisoformat(metadata["published_at"]),
+                status=metadata.get("status"),
+                impact_level=metadata.get("impact_level"),
+                news_type=NewsType(metadata.get("news_type")) if metadata.get("news_type") else NewsType.UNKNOWN,
+                url=metadata.get("url"),
+                short_url=metadata.get("short_url"),
+                affected_components=metadata.get("affected_components").split(", ") if metadata.get("affected_components") else None,
+                created_at=datetime.fromisoformat(metadata["created_at"]) if metadata.get("created_at") else None,
+                updated_at=datetime.fromisoformat(metadata["updated_at"]) if metadata.get("updated_at") else None,
+                resolved_at=datetime.fromisoformat(metadata["resolved_at"]) if metadata.get("resolved_at") else None,
+                started_at=datetime.fromisoformat(metadata["started_at"]) if metadata.get("started_at") else None,
             )
             
         except Exception as e:
@@ -217,7 +248,17 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                     source=metadata["source"],
                     title=metadata["title"],
                     body=metadata.get("body", ""),
-                    published_at=metadata["published_at"]
+                    published_at=datetime.fromisoformat(metadata["published_at"]),
+                    status=metadata.get("status"),
+                    impact_level=metadata.get("impact_level"),
+                    news_type=NewsType(metadata.get("news_type")) if metadata.get("news_type") else NewsType.UNKNOWN,
+                    url=metadata.get("url"),
+                    short_url=metadata.get("short_url"),
+                    affected_components=metadata.get("affected_components").split(", ") if metadata.get("affected_components") else None,
+                    created_at=datetime.fromisoformat(metadata["created_at"]) if metadata.get("created_at") else None,
+                    updated_at=datetime.fromisoformat(metadata["updated_at"]) if metadata.get("updated_at") else None,
+                    resolved_at=datetime.fromisoformat(metadata["resolved_at"]) if metadata.get("resolved_at") else None,
+                    started_at=datetime.fromisoformat(metadata["started_at"]) if metadata.get("started_at") else None,
                 )
                 events.append(event)
             

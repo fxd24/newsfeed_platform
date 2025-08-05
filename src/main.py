@@ -15,7 +15,7 @@ from src.config import ConfigManager
 PORT = 8000
 HOST = "0.0.0.0"
 DEBUG = False
-STORAGE_TYPE = "memory"
+STORAGE_TYPE = "chromadb"  # Changed to use ChromaDB by default
 CONFIG_FILE = os.getenv("CONFIG_FILE", "config/sources.yaml")
 
 # Configure logging

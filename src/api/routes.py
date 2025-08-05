@@ -73,11 +73,24 @@ async def ingest_events(
 
 @router.get("/retrieve", response_model=list[NewsEvent])
 async def retrieve_events(repository: NewsEventRepository = Depends(get_repository)):
-    """Return all stored events"""
+    """Return filtered events relevant to IT managers using semantic search"""
     try:
-        events = repository.get_all_events()
+        # IT Manager focused query for major outages, cybersecurity threats, and critical software bugs
+        it_manager_query = """
+        major outage critical incident service disruption system failure
+        cybersecurity threat security breach vulnerability exploit malware ransomware
+        critical software bug severe bug production issue data loss
+        emergency maintenance urgent fix hotfix patch
+        """
         
-        logger.info(f"Retrieved {len(events)} events from {repository.__class__.__name__}")
+        # Use semantic search if repository supports it (ChromaDB)
+        if hasattr(repository, 'search_events'):
+            events = repository.search_events(it_manager_query, limit=20)
+            logger.info(f"Retrieved {len(events)} IT-relevant events using semantic search")
+        else:
+            # Fallback to all events for in-memory repository
+            events = repository.get_all_events()
+            logger.info(f"Retrieved {len(events)} events from {repository.__class__.__name__} (no semantic search)")
         
         return events
         
