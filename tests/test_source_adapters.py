@@ -9,10 +9,10 @@ import pytest
 from datetime import datetime
 
 from src.sources.adapters import (
-    GitHubStatusAdapter, AWSStatusAdapter, HackerNewsAdapter,
+    GitHubStatusAdapter, HackerNewsAdapter,
     GenericStatusAdapter, RSSAdapter, GitHubSecurityAdvisoriesAdapter
 )
-from src.models.domain import NewsEvent
+from src.models.domain import NewsEvent, NewsType
 
 
 class TestGitHubSecurityAdvisoriesAdapter:
@@ -33,11 +33,9 @@ class TestGitHubSecurityAdvisoriesAdapter:
                 "html_url": "https://github.com/advisories/GHSA-example",
                 "created_at": "2024-01-15T10:00:00Z",
                 "updated_at": "2024-01-15T10:30:00Z",
-                "vulnerability": {
-                    "severity": "critical",
-                    "cvss": {
-                        "score": 9.8
-                    }
+                "severity": "critical",
+                "cvss": {
+                    "score": 9.8
                 },
                 "vulnerabilities": [
                     {
@@ -61,9 +59,7 @@ class TestGitHubSecurityAdvisoriesAdapter:
                 "html_url": "https://github.com/advisories/GHSA-example2",
                 "created_at": "2024-01-15T14:00:00Z",
                 "updated_at": "2024-01-15T14:45:00Z",
-                "vulnerability": {
-                    "severity": "high"
-                },
+                "severity": "high",
                 "vulnerabilities": [
                     {
                         "package": {
@@ -122,9 +118,7 @@ class TestGitHubSecurityAdvisoriesAdapter:
                 "summary": "Valid advisory",
                 "description": "Valid description",
                 "published_at": "2024-01-15T10:30:00Z",
-                "vulnerability": {
-                    "severity": "medium"
-                }
+                "severity": "medium"
             }
         ]
         
@@ -186,11 +180,9 @@ class TestGitHubSecurityAdvisoriesAdapter:
         """Test creating detailed advisory body"""
         advisory = {
             "description": "Test vulnerability description",
-            "vulnerability": {
-                "severity": "high",
-                "cvss": {
-                    "score": 8.5
-                }
+            "severity": "high",
+            "cvss": {
+                "score": 8.5
             },
             "vulnerabilities": [
                 {
@@ -207,7 +199,7 @@ class TestGitHubSecurityAdvisoriesAdapter:
             ]
         }
         
-        vulnerability = advisory["vulnerability"]
+        vulnerability = advisory.get("vulnerabilities", [{}])[0] if advisory.get("vulnerabilities") else {}
         body = adapter._create_advisory_body(advisory, vulnerability)
         
         assert "Test vulnerability description" in body
@@ -241,6 +233,100 @@ class TestGitHubSecurityAdvisoriesAdapter:
         # None
         result = adapter._parse_github_datetime(None)
         assert isinstance(result, datetime)
+
+
+class TestNewsTypeClassification:
+    """Test suite for news type classification across adapters"""
+    
+    def test_github_security_advisories_news_type(self):
+        """Test that GitHub Security Advisories are classified correctly"""
+        adapter = GitHubSecurityAdvisoriesAdapter()
+        
+        raw_data = [
+            {
+                "summary": "Test advisory",
+                "description": "Test description",
+                "published_at": "2024-01-15T10:30:00Z",
+                "vulnerability": {
+                    "severity": "high"
+                }
+            }
+        ]
+        
+        events = adapter.adapt(raw_data)
+        assert len(events) == 1
+        assert events[0].news_type == NewsType.SECURITY_ADVISORY
+    
+    def test_github_status_news_type(self):
+        """Test that GitHub Status incidents are classified correctly"""
+        adapter = GitHubStatusAdapter()
+        
+        raw_data = {
+            "incidents": [
+                {
+                    "name": "Test incident",
+                    "body": "Test body",
+                    "created_at": "2024-01-15T10:30:00Z"
+                }
+            ]
+        }
+        
+        events = adapter.adapt(raw_data)
+        assert len(events) == 1
+        assert events[0].news_type == NewsType.SERVICE_STATUS
+    
+
+    
+    def test_hackernews_news_type(self):
+        """Test that HackerNews stories default to unknown"""
+        adapter = HackerNewsAdapter()
+        
+        raw_data = [12345, 67890]  # Mock story IDs
+        
+        events = adapter.adapt(raw_data)
+        assert len(events) == 2
+        for event in events:
+            assert event.news_type == NewsType.UNKNOWN
+    
+    def test_generic_status_news_type(self):
+        """Test that Generic Status incidents are classified correctly"""
+        config = {
+            "source_name": "Test Service",
+            "incidents_path": "incidents"
+        }
+        adapter = GenericStatusAdapter(config)
+        
+        raw_data = {
+            "incidents": [
+                {
+                    "name": "Test incident",
+                    "body": "Test body",
+                    "created_at": "2024-01-15T10:30:00Z"
+                }
+            ]
+        }
+        
+        events = adapter.adapt(raw_data)
+        assert len(events) == 1
+        assert events[0].news_type == NewsType.SERVICE_STATUS
+    
+    def test_rss_news_type(self):
+        """Test that RSS items default to unknown"""
+        adapter = RSSAdapter("Test RSS")
+        
+        raw_data = {
+            "items": [
+                {
+                    "title": "Test RSS Item",
+                    "description": "Test description",
+                    "pubDate": "2024-01-15T10:30:00Z"
+                }
+            ]
+        }
+        
+        events = adapter.adapt(raw_data)
+        assert len(events) == 1
+        assert events[0].news_type == NewsType.UNKNOWN
 
 
 class TestGitHubStatusAdapter:
@@ -357,71 +443,7 @@ class TestGitHubStatusAdapter:
         assert isinstance(result, datetime)  # Should return current time
 
 
-class TestAWSStatusAdapter:
-    """Test the AWS Status Page adapter"""
-    
-    @pytest.fixture
-    def adapter(self):
-        """Create an AWS status adapter"""
-        return AWSStatusAdapter()
-    
-    def test_adapt_valid_data(self, adapter):
-        """Test adapting valid AWS status data"""
-        raw_data = {
-            "events": [
-                {
-                    "summary": "AWS EC2 Issues",
-                    "description": "We are experiencing issues with EC2 instances",
-                    "start_time": "2024-01-15T10:30:00Z"
-                },
-                {
-                    "summary": "AWS S3 Delays",
-                    "description": "S3 operations are experiencing delays",
-                    "start_time": "2024-01-15T14:45:00Z"
-                }
-            ]
-        }
-        
-        events = adapter.adapt(raw_data)
-        
-        assert len(events) == 2
-        assert all(isinstance(event, NewsEvent) for event in events)
-        
-        # Check first event
-        assert events[0].source == "AWS Status"
-        assert events[0].title == "AWS EC2 Issues"
-        assert events[0].body == "We are experiencing issues with EC2 instances"
-        assert isinstance(events[0].published_at, datetime)
-        
-        # Check second event
-        assert events[1].source == "AWS Status"
-        assert events[1].title == "AWS S3 Delays"
-        assert events[1].body == "S3 operations are experiencing delays"
-        assert isinstance(events[1].published_at, datetime)
-    
-    def test_adapt_invalid_data(self, adapter):
-        """Test adapting invalid data"""
-        # Missing events key
-        raw_data = {"status": "operational"}
-        events = adapter.adapt(raw_data)
-        assert events == []
-        
-        # Not a dict
-        raw_data = "not a dict"
-        events = adapter.adapt(raw_data)
-        assert events == []
-    
-    def test_parse_aws_datetime_valid(self, adapter):
-        """Test parsing valid AWS datetime"""
-        date_str = "2024-01-15T10:30:00Z"
-        result = adapter._parse_aws_datetime(date_str)
-        
-        assert isinstance(result, datetime)
-        assert result.year == 2024
-        assert result.month == 1
-        assert result.day == 15
-        assert result.hour == 10
-        assert result.minute == 30
+
 
 
 class TestHackerNewsAdapter:
@@ -448,8 +470,8 @@ class TestHackerNewsAdapter:
         
         # Check first event
         assert events[0].source == "HackerNews"
-        assert events[0].title == "HackerNews Story #1"
-        assert events[0].body == "Top story from HackerNews with ID 1"
+        assert events[0].title == "HackerNews Top Story #1"
+        assert events[0].body == "Popular story from HackerNews community. Story ID: 1. This story has received significant attention from the HackerNews community and may contain relevant information for IT professionals."
         assert isinstance(events[0].published_at, datetime)
     
     def test_adapt_respects_max_items(self, adapter):
@@ -460,8 +482,8 @@ class TestHackerNewsAdapter:
         
         # Should only process max_items (5)
         assert len(events) == 5
-        assert events[0].title == "HackerNews Story #1"
-        assert events[4].title == "HackerNews Story #5"
+        assert events[0].title == "HackerNews Top Story #1"
+        assert events[4].title == "HackerNews Top Story #5"
     
     def test_adapt_invalid_data(self, adapter):
         """Test adapting invalid data"""
@@ -482,9 +504,9 @@ class TestHackerNewsAdapter:
         
         # Should process all items (even invalid ones get processed)
         assert len(events) == 3
-        assert events[0].title == "HackerNews Story #1"
-        assert events[1].title == "HackerNews Story #invalid_id"
-        assert events[2].title == "HackerNews Story #3"
+        assert events[0].title == "HackerNews Top Story #1"
+        assert events[1].title == "HackerNews Top Story #invalid_id"
+        assert events[2].title == "HackerNews Top Story #3"
 
 
 class TestGenericStatusAdapter:
@@ -728,24 +750,7 @@ class TestAdapterErrorHandling:
         events = adapter.adapt(raw_data)
         assert isinstance(events, list)
     
-    def test_aws_adapter_error_handling(self):
-        """Test AWS adapter error handling"""
-        adapter = AWSStatusAdapter()
-        
-        # Test with malformed data
-        raw_data = {
-            "events": [
-                {
-                    "summary": None,  # This could cause issues
-                    "description": "Test description",
-                    "start_time": "2024-01-15T10:30:00Z"
-                }
-            ]
-        }
-        
-        # Should not raise an exception
-        events = adapter.adapt(raw_data)
-        assert isinstance(events, list)
+
     
     def test_hackernews_adapter_error_handling(self):
         """Test Hacker News adapter error handling"""

@@ -35,11 +35,10 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
                     continue
                 
                 # Extract vulnerability information
-                vulnerability = advisory.get('vulnerability', {})
-                if not isinstance(vulnerability, dict):
-                    vulnerability = {}
+                vulnerabilities = advisory.get('vulnerabilities', [])
+                vulnerability = vulnerabilities[0] if vulnerabilities else {}
                 
-                severity = vulnerability.get('severity', 'unknown')
+                severity = advisory.get('severity', 'unknown')
                 
                 # Map GitHub severity to impact level
                 impact_level = self._map_severity_to_impact(severity)
@@ -92,18 +91,19 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
             body_parts.append(f"Description: {advisory['description']}")
         
         # Add severity information
-        if vulnerability.get('severity'):
-            body_parts.append(f"Severity: {vulnerability['severity'].upper()}")
+        if advisory.get('severity'):
+            body_parts.append(f"Severity: {advisory['severity'].upper()}")
         
         # Add CVSS score if available
-        if vulnerability.get('cvss', {}).get('score'):
-            body_parts.append(f"CVSS Score: {vulnerability['cvss']['score']}")
+        cvss = advisory.get('cvss', {})
+        if cvss and cvss.get('score'):
+            body_parts.append(f"CVSS Score: {cvss['score']}")
         
         # Add affected packages
-        affected = advisory.get('vulnerabilities', [])
-        if affected:
+        vulnerabilities = advisory.get('vulnerabilities', [])
+        if vulnerabilities:
             package_info = []
-            for vuln in affected:
+            for vuln in vulnerabilities:
                 package = vuln.get('package', {})
                 package_name = package.get('name', 'Unknown')
                 ecosystem = package.get('ecosystem', 'Unknown')
@@ -118,7 +118,7 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
         if references:
             body_parts.append("References:")
             for ref in references:
-                body_parts.append(f"- {ref.get('url', 'No URL')}")
+                body_parts.append(f"- {ref}")
         
         return "\n".join(body_parts)
     
