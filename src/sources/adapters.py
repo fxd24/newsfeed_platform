@@ -274,6 +274,7 @@ class HackerNewsAdapter(SourceAdapter):
                     id=str(uuid.uuid4()),
                     source="HackerNews",
                     title=f"HackerNews Top Story #{story_id}",
+                    #TODO proper body!
                     body=f"Popular story from HackerNews community. Story ID: {story_id}. This story has received significant attention from the HackerNews community and may contain relevant information for IT professionals.",
                     published_at=datetime.now(),
                     url=f"https://news.ycombinator.com/item?id={story_id}",
@@ -482,9 +483,9 @@ class RSSAdapter(SourceAdapter):
             except ValueError:
                 continue
         
-        # Try ISO format
+        # Try ISO format # TODO verify this!
         try:
             return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
         except ValueError:
             logger.warning(f"Could not parse RSS datetime: {date_str}")
-            return datetime.now() 
+            return datetime.now()
