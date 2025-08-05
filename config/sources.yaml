@@ -40,7 +40,7 @@ sources:
 
   # Example: Generic Status Page (Cloudflare)
   cloudflare_status:
-    enabled: false  # Disabled by default
+    enabled: true
     poll_interval: 300
     source_type: "json_api"
     adapter_class: "GenericStatusAdapter"
@@ -55,7 +55,7 @@ sources:
 
   # Example: RSS Feed
   techcrunch_rss:
-    enabled: false  # Disabled by default
+    enabled: true
     poll_interval: 900  # 15 minutes
     source_type: "rss"
     adapter_class: "RSSAdapter"
@@ -65,7 +65,7 @@ sources:
 
   # Example: Another Generic Status Page
   atlassian_status:
-    enabled: false  # Disabled by default
+    enabled: true
     poll_interval: 300
     source_type: "json_api"
     adapter_class: "GenericStatusAdapter"
