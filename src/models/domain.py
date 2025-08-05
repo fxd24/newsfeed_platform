@@ -1,6 +1,15 @@
 from pydantic import BaseModel, ConfigDict, field_serializer
 from datetime import datetime
 from typing import Optional, List, Dict
+from enum import Enum
+
+
+class NewsType(str, Enum):
+    """Enumeration of news types"""
+    SERVICE_STATUS = "service_status"
+    SECURITY_ADVISORY = "security_advisory"
+    SOFTWARE_BUG = "software_bug"
+    UNKNOWN = "unknown"
 
 
 class NewsEvent(BaseModel):
@@ -17,6 +26,7 @@ class NewsEvent(BaseModel):
     # Extended fields for enhanced functionality
     status: Optional[str] = None  # Current status (unknown/identified/investigating/monitoring/resolved)
     impact_level: Optional[str] = None  # Impact level (unknown/critical/major/minor/none)
+    news_type: Optional[NewsType] = NewsType.UNKNOWN  # Type of news item
     url: Optional[str] = None  # Link to the incident/article
     short_url: Optional[str] = None  # Short link
     

@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 from src.sources import SourceAdapter
-from src.models.domain import NewsEvent
+from src.models.domain import NewsEvent, NewsType
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
                     published_at=self._parse_github_datetime(advisory.get('published_at')),
                     status=advisory.get('state', 'unknown'),
                     impact_level=impact_level,
+                    news_type=NewsType.SECURITY_ADVISORY,
                     url=advisory.get('html_url'),
                     affected_components=affected_components,
                     created_at=self._parse_github_datetime(advisory.get('created_at')),
@@ -170,6 +171,7 @@ class GitHubStatusAdapter(SourceAdapter):
                     published_at=self._parse_github_datetime(incident.get('created_at')),
                     status=incident.get('status'),
                     impact_level=incident.get('impact'),
+                    news_type=NewsType.SERVICE_STATUS,
                     url=incident.get('shortlink'),
                     short_url=incident.get('shortlink'),
                     affected_components=affected_components,
@@ -249,7 +251,8 @@ class AWSStatusAdapter(SourceAdapter):
                     source="AWS Status",
                     title=event_data.get('summary', 'AWS Event'),
                     body=event_data.get('description', ''),
-                    published_at=self._parse_aws_datetime(event_data.get('start_time'))
+                    published_at=self._parse_aws_datetime(event_data.get('start_time')),
+                    news_type=NewsType.SERVICE_STATUS
                 )
                 events.append(event)
                 
@@ -289,13 +292,14 @@ class HackerNewsAdapter(SourceAdapter):
         # HackerNews API returns list of story IDs
         # We'd need to fetch individual stories, but for now we'll create mock events
         for i, story_id in enumerate(raw_data[:self.max_items]):
-            try:
+            try:      
                 event = NewsEvent(
                     id=str(uuid.uuid4()),
                     source="HackerNews",
                     title=f"HackerNews Story #{story_id}",
                     body=f"Top story from HackerNews with ID {story_id}",
-                    published_at=datetime.now()
+                    published_at=datetime.now(),
+                    news_type=NewsType.UNKNOWN
                 )
                 events.append(event)
                 
@@ -306,8 +310,9 @@ class HackerNewsAdapter(SourceAdapter):
         return events
 
 
+# TODO add Generic StatusPagee.io Adapter!
 class GenericStatusAdapter(SourceAdapter):
-    """Generic adapter for status pages following common patterns"""
+    """Generic adapter for status pages following common patterns from StatusPage.io API"""
     
     def __init__(self, config: dict[str, Any]):
         self.config = config
@@ -357,6 +362,7 @@ class GenericStatusAdapter(SourceAdapter):
                     published_at=self._parse_datetime(date_str),
                     status=incident.get('status'),
                     impact_level=incident.get('impact'),
+                    news_type=NewsType.SERVICE_STATUS,
                     url=incident.get('shortlink'),
                     short_url=incident.get('shortlink'),
                     affected_components=affected_components,
@@ -452,13 +458,13 @@ class RSSAdapter(SourceAdapter):
                 title = item.get('title', 'RSS Item')
                 body = item.get('description') or item.get('content', '')
                 date_str = item.get('pubDate') or item.get('published')
-                
                 event = NewsEvent(
                     id=str(uuid.uuid4()),
                     source=self.source_name,
                     title=title,
                     body=body,
-                    published_at=self._parse_rss_datetime(date_str)
+                    published_at=self._parse_rss_datetime(date_str),
+                    news_type=NewsType.UNKNOWN
                 )
                 events.append(event)
                 
