@@ -234,7 +234,7 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
             raise
     
     def search_events(self, query: str, limit: int = 10, days_back: int = None, 
-                     alpha: float = 0.7, decay_param: float = 0.02) -> list[NewsEvent]:
+                     alpha: float = 0.9, decay_param: float = 0.2) -> list[NewsEvent]:
         """Semantic search for events with hybrid relevancy + recency scoring
         
         Args:

@@ -29,8 +29,8 @@ server = FastMCP("newsfeed")
 async def retrieve_news_events(
     limit: int = 100,
     days_back: int = 14,
-    alpha: float = 0.7,
-    decay_param: float = 0.02
+    alpha: float = 0.9,
+    decay_param: float = 0.2
 ) -> str:
     """
     Retrieve IT-relevant news events from the newsfeed platform.
@@ -40,8 +40,8 @@ async def retrieve_news_events(
     Args:
         limit: Maximum number of results to return (default: 100)
         days_back: Only return events from the last N days (default: 14)
-        alpha: Weight for relevancy vs recency (0.7 = 70% relevancy, 30% recency) (default: 0.7)
-        decay_param: Exponential decay parameter for recency scoring (0.02 = 2% decay per day) (default: 0.02)
+            alpha: Weight for relevancy vs recency (0.9 = 90% relevancy, 10% recency) (default: 0.9)
+    decay_param: Exponential decay parameter for recency scoring (0.2 = 20% decay per day) (default: 0.2)
     
     Returns:
         Formatted summary of IT-relevant news events

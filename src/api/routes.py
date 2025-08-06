@@ -76,16 +76,16 @@ async def retrieve_events(
     repository: NewsEventRepository = Depends(get_repository),
     limit: int = 100,
     days_back: int = 14,
-    alpha: float = 0.7,
-    decay_param: float = 0.02
+    alpha: float = 0.9,
+    decay_param: float = 0.2
 ):
     """Return filtered events relevant to IT managers using hybrid relevancy + recency scoring
     
     Args:
         limit: Maximum number of results to return
         days_back: Only return events from the last N days
-        alpha: Weight for relevancy vs recency (0.7 = 70% relevancy, 30% recency)
-        decay_param: Exponential decay parameter for recency scoring (0.02 = 2% decay per day)
+        alpha: Weight for relevancy vs recency (0.9 = 90% relevancy, 10% recency)
+        decay_param: Exponential decay parameter for recency scoring (0.2 = 20% decay per day)
     """
     try:
         # IT Manager focused query for major outages, cybersecurity threats, and critical software bugs

@@ -163,9 +163,9 @@ def show_retrieve_section():
     with col3:
         # Initialize session state
         if 'alpha' not in st.session_state:
-            st.session_state.alpha = 0.7
+            st.session_state.alpha = 0.9
         if 'decay_param' not in st.session_state:
-            st.session_state.decay_param = 0.02
+            st.session_state.decay_param = 0.2
             
         alpha = st.slider("α (Alpha)", min_value=0.0, max_value=1.0, value=st.session_state.alpha, step=0.1, 
                          help="Weight for relevancy vs recency (0.0 = pure recency, 1.0 = pure relevancy)",
@@ -201,9 +201,9 @@ def show_retrieve_section():
             st.rerun()
     
     with col3:
-        if st.button("⚖️ Balanced", help="70% relevancy, 30% recency (default)"):
-            st.session_state.alpha = 0.7
-            st.session_state.decay_param = 0.02
+        if st.button("⚖️ Balanced", help="90% relevancy, 10% recency (default)"):
+            st.session_state.alpha = 0.9
+            st.session_state.decay_param = 0.2
             st.rerun()
     
     with col4:

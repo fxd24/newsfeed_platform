@@ -74,7 +74,7 @@ class TestHybridScoring:
             "critical system outage security vulnerability", 
             limit=4,
             alpha=0.9,  # 90% relevancy, 10% recency
-            decay_param=0.02
+            decay_param=0.2
         )
         
         # Should find all events but rank by relevancy
@@ -96,7 +96,7 @@ class TestHybridScoring:
             "critical system outage security vulnerability",
             limit=4, 
             alpha=0.1,  # 10% relevancy, 90% recency
-            decay_param=0.02
+            decay_param=0.2
         )
         
         # Should find all events but rank by recency
@@ -117,8 +117,8 @@ class TestHybridScoring:
         results = repository.search_events(
             "critical system outage security vulnerability",
             limit=4,
-            alpha=0.7,  # 70% relevancy, 30% recency (default)
-            decay_param=0.02
+            alpha=0.9,  # 90% relevancy, 10% recency (default)
+            decay_param=0.2
         )
         
         # Should find all events

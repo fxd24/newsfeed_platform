@@ -264,15 +264,15 @@ Combined Score = α × relevancy_score + (1-α) × recency_score
 Where:
 - **relevancy_score** = 1 - ChromaDB distance (higher = more relevant)
 - **recency_score** = exp(-decay_param × days_old)
-- **α (alpha)** = Weight for relevancy vs recency (default: 0.7)
-- **decay_param** = Exponential decay rate (default: 0.02 = 2% decay per day)
+- **α (alpha)** = Weight for relevancy vs recency (default: 0.9)
+- **decay_param** = Exponential decay rate (default: 0.2 = 20% decay per day)
 
 ### Parameter Examples
 
 - **α=0.9**: 90% relevancy, 10% recency (focus on content relevance)
-- **α=0.7**: 70% relevancy, 30% recency (balanced approach - DEFAULT)
+- **α=0.9**: 90% relevancy, 10% recency (relevance-focused - DEFAULT)
 - **α=0.1**: 10% relevancy, 90% recency (focus on recent events)
-- **decay=0.02**: 2% decay per day (DEFAULT)
+- **decay=0.2**: 20% decay per day (DEFAULT)
 - **decay=0.1**: 10% decay per day (faster decay)
 - **decay=0.01**: 1% decay per day (slower decay)
 
