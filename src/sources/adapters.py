@@ -49,8 +49,11 @@ class GitHubSecurityAdvisoriesAdapter(SourceAdapter):
                 # Extract affected packages
                 affected_components = self._extract_affected_packages(advisory)
                 
+                # Use GitHub Security Advisory ID (ghsa_id) if available, otherwise generate UUID
+                event_id = advisory.get('ghsa_id', str(uuid.uuid4()))
+                
                 event = NewsEvent(
-                    id=str(uuid.uuid4()),
+                    id=event_id,
                     source="GitHub Security Advisories",
                     title=advisory.get('summary', 'Security Advisory'),
                     body=body,
@@ -273,8 +276,11 @@ class HackerNewsAdapter(SourceAdapter):
         # For now, we'll create descriptive events since fetching individual stories requires additional API calls
         for i, story_id in enumerate(raw_data[:self.max_items]):
             try:      
+                # Use HackerNews story ID as the unique identifier
+                event_id = f"hn_{story_id}"
+                
                 event = NewsEvent(
-                    id=str(uuid.uuid4()),
+                    id=event_id,
                     source="HackerNews",
                     title=f"HackerNews Top Story #{story_id}",
                     #TODO proper body!
@@ -454,8 +460,11 @@ class RSSAdapter(SourceAdapter):
                 date_str = item.get('pubDate') or item.get('published')
                 url = item.get('link') or item.get('url')
                 
+                # Use URL as unique identifier for RSS items
+                event_id = url if url else str(uuid.uuid4())
+                
                 event = NewsEvent(
-                    id=str(uuid.uuid4()),
+                    id=event_id,
                     source=self.source_name,
                     title=title,
                     body=body,
