@@ -415,6 +415,7 @@ With **hundreds of news channels** sending **high-frequency updates**, the curre
 10. **Federated learning**: Privacy-preserving model improvement across organizations
 11. **Real-time collaboration**: Multi-team incident coordination features
 12. **Predictive modeling**: Forecasting infrastructure issues based on event patterns
+13. **Language content**: make the sytem work with various languages
 
 ## Conclusion
 
