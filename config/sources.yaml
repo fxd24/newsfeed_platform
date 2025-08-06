@@ -17,6 +17,8 @@ sources:
     url: "https://www.githubstatus.com/api/v2/incidents.json"
     headers:
       User-Agent: "Newsfeed-Platform/1.0"
+    adapter_config:
+      id_field: "id"
 
 
 

@@ -171,8 +171,11 @@ class GitHubStatusAdapter(SourceAdapter):
                 # Extract affected components
                 affected_components = self._extract_affected_components(incident)
                 
+                # Use source ID if available, otherwise generate UUID
+                event_id = incident.get('id', str(uuid.uuid4())) # TODO deduplicate if using generated uuid
+                
                 event = NewsEvent(
-                    id=str(uuid.uuid4()),
+                    id=event_id,
                     source="GitHub Status",
                     title=incident.get('name', 'GitHub Incident'),
                     body=body,
@@ -302,6 +305,7 @@ class GenericStatusAdapter(SourceAdapter):
         
         # Extract configuration
         incidents_path = self.config.get('incidents_path', 'incidents')
+        id_field = self.config.get('id_field', 'id')
         title_field = self.config.get('title_field', 'title')
         body_field = self.config.get('body_field', 'body')
         date_field = self.config.get('date_field', 'created_at')
@@ -327,6 +331,9 @@ class GenericStatusAdapter(SourceAdapter):
                 original_body = incident.get(body_field, '')
                 date_str = incident.get(date_field)
                 
+                # Use source ID if available, otherwise generate UUID
+                event_id = incident.get(id_field, str(uuid.uuid4()))
+                
                 # Create enriched body with incident updates
                 body = self._create_incident_body(incident, original_body)
                 
@@ -334,7 +341,7 @@ class GenericStatusAdapter(SourceAdapter):
                 affected_components = self._extract_affected_components(incident)
                 
                 event = NewsEvent(
-                    id=str(uuid.uuid4()),
+                    id=event_id,
                     source=source_name,
                     title=title,
                     body=body,
