@@ -15,11 +15,18 @@ from src.config import ConfigManager
 PORT = 8000
 HOST = "0.0.0.0"
 DEBUG = False
-STORAGE_TYPE = "chromadb"  # Changed to use ChromaDB by default
+STORAGE_TYPE = "chromadb"  # chromadb | inmemory
 CONFIG_FILE = os.getenv("CONFIG_FILE", "config/sources.yaml")
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('logs/newsfeed_platform.log')
+    ]
+)
 logger = logging.getLogger(__name__)
 
 # Global instances
