@@ -2,6 +2,218 @@
 
 A real-time IT news aggregation and filtering system with configurable sources, built with FastAPI and ChromaDB.
 
+## 🚀 Quick Start
+
+### Prerequisites
+
+1. **Install uv** (Python package manager from Astral):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Install make** (if not already installed):
+   - **macOS**: `brew install make`
+   - **Ubuntu/Debian**: `sudo apt-get install make`
+
+
+### Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd newsfeed_platform
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   make sync
+   ```
+
+3. **Configure sources**:
+   Edit `config/sources.yaml` and set `enabled: true` for the sources you want to use:
+   ```yaml
+   sources:
+     github_status:
+       enabled: true  # Change from false to true
+       poll_interval: 300
+       # ... rest of config
+     
+     hackernews:
+       enabled: true  # Change from false to true
+       poll_interval: 600
+       # ... rest of config
+   ```
+
+4. **Start the development server**:
+   ```bash
+   make dev
+   ```
+   This starts the FastAPI server with API endpoints and database on `http://localhost:8000`
+
+5. **Start the Streamlit UI** (in a new terminal):
+   ```bash
+   make ui
+   ```
+   This opens the web interface on `http://localhost:8501`
+
+## 🎯 Available Commands
+
+- `make dev` - Start the development server (API + database)
+- `make ui` - Start the Streamlit web interface
+- `make tests` - Run the test suite
+- `make lint` - Check code quality with ruff
+- `make fix` - Auto-fix linting issues
+- `make sync` - Sync dependencies with uv
+
+## 🔧 Configuration
+
+### Source Configuration
+
+Edit `config/sources.yaml` to enable and configure news sources:
+
+```yaml
+sources:
+  github_status:
+    enabled: true  # Set to true to enable this source
+    poll_interval: 300  # Poll every 5 minutes
+    source_type: "json_api"
+    adapter_class: "GitHubStatusAdapter"
+    url: "https://www.githubstatus.com/api/v2/incidents.json"
+    
+  hackernews:
+    enabled: true  # Set to true to enable this source
+    poll_interval: 600  # Poll every 10 minutes
+    source_type: "hackernews"
+    adapter_class: "HackerNewsAdapter"
+    url: "https://hacker-news.firebaseio.com/v0/topstories.json"
+    adapter_config:
+      max_items: 10
+```
+
+### Polling Intervals
+
+You can adjust how frequently sources are polled:
+- `poll_interval: 300` = 5 minutes
+- `poll_interval: 600` = 10 minutes  
+- `poll_interval: 900` = 15 minutes
+- `poll_interval: 1800` = 30 minutes
+
+## 🔌 API Usage Examples
+
+### Ingest Events
+
+```bash
+# Ingest events from an external source
+curl -X POST "http://localhost:8000/ingest" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "manual_ingest",
+    "title": "Critical Security Update",
+    "body": "Important security patch released for production systems",
+    "published_at": "2024-01-15T10:30:00Z"
+  }'
+```
+
+### Retrieve Events
+
+```bash
+# Get latest events with default scoring (70% relevancy, 30% recency)
+curl "http://localhost:8000/retrieve?limit=20"
+
+# Get events from last 7 days with custom scoring
+curl "http://localhost:8000/retrieve?limit=50&days_back=7&alpha=0.8&decay_param=0.01"
+
+# Get all stored events without filtering
+curl "http://localhost:8000/retrieve/all"
+```
+
+### Manual Polling
+
+If you don't want to wait for the scheduled polling, you can manually trigger it:
+
+```bash
+# Poll all enabled sources immediately
+curl -X POST "http://localhost:8000/admin/poll/all"
+
+# Poll a specific source
+curl -X POST "http://localhost:8000/admin/poll/github_status"
+```
+
+### Check System Status
+
+```bash
+# Get overall system status
+curl "http://localhost:8000/admin/status"
+
+# Check source configurations
+curl "http://localhost:8000/admin/sources"
+
+# View scheduler status
+curl "http://localhost:8000/admin/scheduler"
+
+# Get ingestion statistics
+curl "http://localhost:8000/admin/stats"
+```
+
+## 🤖 MCP Server Setup
+
+The platform includes a Model Context Protocol (MCP) server for AI tool integration.
+
+### Prerequisites
+
+1. **Ensure the main server is running**:
+   ```bash
+   make dev
+   ```
+
+2. **Make the MCP script executable**:
+   ```bash
+   chmod +x mcp_server.sh
+   ```
+
+3. **Start the MCP server**:
+   ```bash
+   ./mcp_server.sh
+   ```
+
+### MCP Client Configuration
+
+Configure your MCP client (e.g., Claude Desktop App, Cursor IDE) with:
+
+```json
+{
+  "mcpServers": {
+    "newsfeed": {
+      "command": "/absolute/path/to/newsfeed_platform/mcp_server.sh",
+      "cwd": "/absolute/path/to/newsfeed_platform"
+    }
+  }
+}
+```
+
+**Important**: Replace `/absolute/path/to/newsfeed_platform/` with the actual path to your project directory.
+
+### MCP Usage
+
+Once configured, you can ask your AI tool questions like:
+- "What are the latest IT news events?"
+- "Show me critical security incidents from the last week"
+- "Get the top 20 most relevant IT events"
+
+## 🧪 Testing
+
+Run the complete test suite:
+
+```bash
+make tests
+```
+
+Run tests with coverage:
+
+```bash
+uv run pytest tests/ --cov=src
+```
+
 ## 🏗️ Architecture
 
 The platform uses a **Strategy + Adapter pattern** for maximum flexibility:
@@ -26,78 +238,6 @@ The platform uses a **Strategy + Adapter pattern** for maximum flexibility:
 │ ChromaDB Repository                     │  ← Persistence
 └─────────────────────────────────────────┘
 ```
-
-## 🚀 Features
-
-- **Configurable Sources**: Add new sources via YAML configuration
-- **Multiple Data Formats**: JSON APIs, RSS feeds, custom adapters
-- **Background Polling**: Automatic data collection with APScheduler
-- **Unified Ingestion**: Same service handles polling and external API calls
-- **Admin Interface**: Monitor and control sources via REST API
-- **Production Ready**: Error handling, logging, health checks
-
-## 📦 Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd newsfeed_platform
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -e .
-   ```
-
-3. **Run the application**:
-   ```bash
-   python -m src.main
-   ```
-
-The server will start on `http://localhost:8000`
-
-4. **Optional: Set up MCP server** (for AI tool integration):
-   ```bash
-   chmod +x mcp_server.sh
-   ./mcp_server.sh
-   ```
-
-## ⚙️ Configuration
-
-Sources are configured via `config/sources.yaml`:
-
-```yaml
-sources:
-  github_status:
-    enabled: true
-    poll_interval: 300  # 5 minutes
-    source_type: "json_api"
-    adapter_class: "GitHubStatusAdapter"
-    url: "https://www.githubstatus.com/api/v2/incidents.json"
-    
-  hackernews:
-    enabled: true
-    poll_interval: 600  # 10 minutes
-    source_type: "json_api"
-    adapter_class: "HackerNewsAdapter"
-    url: "https://hacker-news.firebaseio.com/v0/topstories.json"
-    adapter_config:
-      max_items: 10
-```
-
-### Source Types
-
-- **JSON APIs**: `json_api` - Standard REST APIs
-- **RSS Feeds**: `rss` - RSS/Atom feeds
-- **Mock**: `mock` - For testing
-
-### Adapter Classes
-
-- **GitHubStatusAdapter**: GitHub Status Page
-- **AWSStatusAdapter**: AWS Status Page
-- **HackerNewsAdapter**: HackerNews API
-- **GenericStatusAdapter**: Configurable for any status page
-- **RSSAdapter**: RSS/Atom feeds
 
 ## 🎯 Hybrid Relevancy + Recency Scoring
 
@@ -124,25 +264,6 @@ Where:
 - **decay=0.1**: 10% decay per day (faster decay)
 - **decay=0.01**: 1% decay per day (slower decay)
 
-### Example API Usage
-
-```bash
-# Default balanced scoring
-GET /retrieve
-
-# Relevancy-focused search
-GET /retrieve?alpha=0.9&decay_param=0.02
-
-# Recency-focused search
-GET /retrieve?alpha=0.1&decay_param=0.02
-
-# High decay rate (events age quickly)
-GET /retrieve?alpha=0.5&decay_param=0.1
-
-# Low decay rate (events stay relevant longer)
-GET /retrieve?alpha=0.5&decay_param=0.01
-```
-
 ## 🔌 API Endpoints
 
 ### Core Endpoints
@@ -157,74 +278,6 @@ GET /retrieve?alpha=0.5&decay_param=0.01
 - `GET /retrieve/all` - Retrieve all stored events without filtering
 - `GET /health` - Health check
 
-## 🤖 MCP Server
-
-The platform includes a Model Context Protocol (MCP) server that allows AI tools (like Cursor IDE, Claude Desktop App, etc.) to retrieve IT-relevant news events directly.
-
-### Features
-
-- **Single Tool**: Only exposes the `/retrieve` API endpoint
-- **IT-Focused**: Returns events relevant to IT managers using hybrid relevancy + recency scoring
-- **Configurable Parameters**: Supports all parameters from the original API
-- **Simple Integration**: Easy to integrate with any MCP-compatible AI tool
-
-### Available Tool
-
-#### `retrieve_news_events`
-
-Retrieves IT-relevant news events from the newsfeed platform.
-
-**Parameters:**
-- `limit` (integer, default: 100): Maximum number of results to return
-- `days_back` (integer, default: 14): Only return events from the last N days
-- `alpha` (number, default: 0.7): Weight for relevancy vs recency (0.7 = 70% relevancy, 30% recency)
-- `decay_param` (number, default: 0.02): Exponential decay parameter for recency scoring
-
-**Returns:** Formatted summary of IT-relevant news events with titles, sources, and previews.
-
-### Setup
-
-1. **Make the script executable**:
-   ```bash
-   chmod +x mcp_server.sh
-   ```
-
-2. **Start the MCP server**:
-   ```bash
-   ./mcp_server.sh
-   ```
-
-### Configuration for MCP Clients
-
-Use the following configuration in your MCP client (e.g., Claude Desktop App, Cursor IDE):
-
-```json
-{
-  "mcpServers": {
-    "newsfeed": {
-      "command": "/path/to/your/newsfeed_platform/mcp_server.sh",
-      "cwd": "/path/to/your/newsfeed_platform"
-    }
-  }
-}
-```
-
-**Important**: Replace `/path/to/your/newsfeed_platform/` with the actual absolute path to your newsfeed platform directory.
-
-### Environment Variables
-
-- `NEWSFEED_API_BASE_URL`: Override the default API URL (default: `http://localhost:8000`)
-
-### Usage Example
-
-When integrated with an MCP client, you can ask questions like:
-
-- "What are the latest IT news events?"
-- "Show me critical security incidents from the last week"
-- "Get the top 20 most relevant IT events"
-
-The MCP server will automatically call the `/retrieve` API with appropriate parameters and return a formatted summary of the events.
-
 ### Admin Endpoints
 
 - `GET /admin/status` - Detailed system status
@@ -234,19 +287,16 @@ The MCP server will automatically call the `/retrieve` API with appropriate para
 - `POST /admin/poll/all` - Manually poll all sources
 - `POST /admin/poll/{source_name}` - Manually poll specific source
 
-## 🧪 Testing
+## 🚀 Features
 
-Run the test suite:
-
-```bash
-pytest tests/
-```
-
-Run with coverage:
-
-```bash
-pytest tests/ --cov=src
-```
+- **Configurable Sources**: Add new sources via YAML configuration
+- **Multiple Data Formats**: JSON APIs, RSS feeds, custom adapters
+- **Background Polling**: Automatic data collection with APScheduler
+- **Unified Ingestion**: Same service handles polling and external API calls
+- **Admin Interface**: Monitor and control sources via REST API
+- **Production Ready**: Error handling, logging, health checks
+- **Hybrid Scoring**: Advanced relevancy + recency scoring system
+- **MCP Integration**: AI tool integration via Model Context Protocol
 
 ## 🔧 Adding New Sources
 
@@ -300,20 +350,7 @@ sources:
 - `STORAGE_TYPE`: `memory` or `chromadb` (default: `memory`)
 - `CHROMA_DIR`: ChromaDB persistence directory (default: `./data/chromadb`)
 
-### Docker Deployment
 
-```dockerfile
-FROM python:3.13-slim
-
-WORKDIR /app
-COPY . .
-
-RUN pip install -e .
-
-EXPOSE 8000
-
-CMD ["python", "-m", "src.main"]
-```
 
 ## 📊 Monitoring
 
@@ -341,13 +378,14 @@ The platform automatically polls configured sources:
 - **Production Ready**: Error handling, retries, monitoring
 - **Type Safe**: Full type hints throughout
 - **Testable**: Each component tested in isolation
+- **AI Integration**: MCP server for AI tool integration
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Add tests for new functionality
-4. Ensure all tests pass
+4. Ensure all tests pass: `make tests`
 5. Submit a pull request
 
 ## 📄 License
