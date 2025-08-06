@@ -26,7 +26,7 @@ sources:
   hackernews:
     enabled: true
     poll_interval: 600  # 10 minutes
-    source_type: "json_api"
+    source_type: "hackernews"
     adapter_class: "HackerNewsAdapter"
     url: "https://hacker-news.firebaseio.com/v0/topstories.json"
     adapter_config:

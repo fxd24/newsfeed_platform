@@ -9,9 +9,11 @@ import logging
 from typing import Any
 from datetime import datetime
 import uuid
+import asyncio
 
 from src.sources import SourceAdapter
 from src.models.domain import NewsEvent, NewsType
+from src.sources.fetchers import HackerNewsFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -263,39 +265,140 @@ class HackerNewsAdapter(SourceAdapter):
     
     def __init__(self, max_items: int = 10):
         self.max_items = max_items
+        self.fetcher = HackerNewsFetcher()
     
     def adapt(self, raw_data: Any) -> list[NewsEvent]:
-        """Transform HackerNews data into NewsEvents"""
+        """Sync fallback - creates basic events without fetching details"""
         events = []
         
         if not isinstance(raw_data, list):
             logger.warning("Invalid HackerNews data format")
             return events
         
-        # HackerNews API returns list of story IDs
-        # For now, we'll create descriptive events since fetching individual stories requires additional API calls
-        for i, story_id in enumerate(raw_data[:self.max_items]):
-            try:      
-                # Use HackerNews story ID as the unique identifier
+        # Create basic events with story IDs (fallback behavior)
+        for story_id in raw_data[:self.max_items]:
+            try:
                 event_id = f"hn_{story_id}"
-                
                 event = NewsEvent(
                     id=event_id,
                     source="HackerNews",
                     title=f"HackerNews Top Story #{story_id}",
-                    #TODO proper body!
-                    body=f"Popular story from HackerNews community. Story ID: {story_id}. This story has received significant attention from the HackerNews community and may contain relevant information for IT professionals.",
+                    body=f"Story ID: {story_id} - Details not available in sync mode\n\n---\nSource: HackerNews",
                     published_at=datetime.now(),
                     url=f"https://news.ycombinator.com/item?id={story_id}",
                     news_type=NewsType.UNKNOWN
                 )
                 events.append(event)
-                
             except Exception as e:
-                logger.error(f"Error processing HackerNews story: {e}")
+                logger.error(f"Error creating fallback HackerNews event: {e}")
                 continue
         
         return events
+    
+    async def adapt_async(self, raw_data: Any) -> list[NewsEvent]:
+        """Transform HackerNews data into NewsEvents with full story details"""
+        events = []
+        
+        if not isinstance(raw_data, list):
+            logger.warning("Invalid HackerNews data format")
+            return events
+        
+        # Get story IDs from the top stories list
+        story_ids = raw_data[:self.max_items]
+        
+        try:
+            # Fetch actual story details for each story ID
+            story_details = await self.fetcher.fetch_story_details(story_ids)
+            
+            for story in story_details:
+                try:
+                    # Skip if story is None or doesn't have required fields
+                    if not story or 'id' not in story:
+                        continue
+                    
+                    # Extract story information
+                    story_id = story.get('id')
+                    title = story.get('title', f'HackerNews Story #{story_id}')
+                    url = story.get('url', f'https://news.ycombinator.com/item?id={story_id}')
+                    score = story.get('score', 0)
+                    descendants = story.get('descendants', 0)  # number of comments
+                    author = story.get('by', 'Unknown')
+                    time = story.get('time')
+                    
+                    # Create body with story details
+                    body_parts = []
+                    
+                    # Prioritize actual story content
+                    if story.get('text'):
+                        # If it's a text post (Ask HN, Show HN, etc.), use the text as main content
+                        body_parts.append(story.get('text'))
+                    elif story.get('url'):
+                        # For link posts, we could potentially fetch the page content
+                        # For now, use the title as the main content since we have the URL
+                        body_parts.append(f"Article: {title}")
+                    
+                    # Add metadata at the end
+                    metadata_parts = []
+                    metadata_parts.append(f"Posted by {author}")
+                    if score > 0:
+                        metadata_parts.append(f"Score: {score} points")
+                    if descendants > 0:
+                        metadata_parts.append(f"Comments: {descendants}")
+                    
+                    # Combine main content with metadata
+                    if body_parts:
+                        main_content = " ".join(body_parts)
+                        metadata = " | ".join(metadata_parts)
+                        body = f"{main_content}\n\n---\n{metadata}"
+                    else:
+                        body = " | ".join(metadata_parts)
+                    
+                    # Parse timestamp
+                    published_at = datetime.fromtimestamp(time) if time else datetime.now()
+                    
+                    # Use HackerNews story ID as the unique identifier
+                    event_id = f"hn_{story_id}"
+                    
+                    event = NewsEvent(
+                        id=event_id,
+                        source="HackerNews",
+                        title=title,
+                        body=body,
+                        published_at=published_at,
+                        url=url,
+                        news_type=NewsType.UNKNOWN
+                    )
+                    events.append(event)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing HackerNews story {story.get('id', 'unknown')}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Error fetching HackerNews story details: {e}")
+            # Fallback to creating basic events with story IDs
+            for story_id in story_ids:
+                try:
+                    event_id = f"hn_{story_id}"
+                    event = NewsEvent(
+                        id=event_id,
+                        source="HackerNews",
+                        title=f"HackerNews Top Story #{story_id}",
+                        body=f"Story ID: {story_id} - Unable to fetch details\n\n---\nSource: HackerNews",
+                        published_at=datetime.now(),
+                        url=f"https://news.ycombinator.com/item?id={story_id}",
+                        news_type=NewsType.UNKNOWN
+                    )
+                    events.append(event)
+                except Exception as e:
+                    logger.error(f"Error creating fallback HackerNews event: {e}")
+                    continue
+        
+        return events
+    
+    async def close(self):
+        """Close the fetcher session"""
+        await self.fetcher.close()
 
 
 # TODO add Generic StatusPagee.io Adapter!

@@ -39,6 +39,10 @@ class SourceAdapter(ABC):
         """Transform raw source data into a list of NewsEvents"""
         pass
     
+    async def adapt_async(self, raw_data: Any) -> list[NewsEvent]:
+        """Async version of adapt method - defaults to calling sync version"""
+        return self.adapt(raw_data)
+    
     def get_source_name(self) -> str:
         """Get the human-readable name of this source"""
         return self.__class__.__name__.replace('Adapter', '')
@@ -86,8 +90,11 @@ class UniversalNewsSource:
                 headers=self.config.headers
             )
             
-            # Use adapter to transform data
-            events = self.adapter.adapt(raw_data)
+            # Use adapter to transform data - try async first, fallback to sync
+            if hasattr(self.adapter, 'adapt_async') and callable(getattr(self.adapter, 'adapt_async')):
+                events = await self.adapter.adapt_async(raw_data)
+            else:
+                events = self.adapter.adapt(raw_data)
             
             self.logger.info(f"Retrieved {len(events)} events from {self.config.name}")
             return events

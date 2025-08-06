@@ -468,10 +468,10 @@ class TestHackerNewsAdapter:
         assert len(events) == 3
         assert all(isinstance(event, NewsEvent) for event in events)
         
-        # Check first event
+        # Check first event - now uses fallback content
         assert events[0].source == "HackerNews"
         assert events[0].title == "HackerNews Top Story #1"
-        assert events[0].body == "Popular story from HackerNews community. Story ID: 1. This story has received significant attention from the HackerNews community and may contain relevant information for IT professionals."
+        assert events[0].body == "Story ID: 1 - Details not available in sync mode\n\n---\nSource: HackerNews"
         assert isinstance(events[0].published_at, datetime)
     
     def test_adapt_respects_max_items(self, adapter):
@@ -507,6 +507,98 @@ class TestHackerNewsAdapter:
         assert events[0].title == "HackerNews Top Story #1"
         assert events[1].title == "HackerNews Top Story #invalid_id"
         assert events[2].title == "HackerNews Top Story #3"
+    
+    @pytest.mark.asyncio
+    async def test_adapt_async_valid_data(self, adapter):
+        """Test async adapting with valid Hacker News data"""
+        # Mock story details that would be returned by the API
+        mock_story_details = [
+            {
+                'id': 1,
+                'title': 'Test Story 1',
+                'url': 'https://example.com/1',
+                'score': 100,
+                'descendants': 25,
+                'by': 'testuser',
+                'time': 1642234567
+            },
+            {
+                'id': 2,
+                'title': 'Test Story 2',
+                'url': 'https://example.com/2',
+                'score': 50,
+                'descendants': 10,
+                'by': 'anotheruser',
+                'time': 1642234568
+            }
+        ]
+        
+        # Mock the fetcher to return our test data
+        async def mock_fetch_story_details(story_ids):
+            return mock_story_details
+        
+        adapter.fetcher.fetch_story_details = mock_fetch_story_details
+        
+        raw_data = [1, 2]
+        events = await adapter.adapt_async(raw_data)
+        
+        assert len(events) == 2
+        assert all(isinstance(event, NewsEvent) for event in events)
+        
+        # Check first event
+        assert events[0].source == "HackerNews"
+        assert events[0].title == "Test Story 1"
+        assert events[0].body == "Article: Test Story 1\n\n---\nPosted by testuser | Score: 100 points | Comments: 25"
+        assert events[0].url == "https://example.com/1"
+        
+        # Check second event
+        assert events[1].source == "HackerNews"
+        assert events[1].title == "Test Story 2"
+        assert events[1].body == "Article: Test Story 2\n\n---\nPosted by anotheruser | Score: 50 points | Comments: 10"
+        assert events[1].url == "https://example.com/2"
+    
+    @pytest.mark.asyncio
+    async def test_adapt_async_text_post(self, adapter):
+        """Test async adapting with text post (Ask HN, Show HN)"""
+        mock_story_details = [
+            {
+                'id': 1,
+                'title': 'Ask HN: What is your favorite programming language?',
+                'text': 'I am curious about what programming languages people prefer and why.',
+                'score': 75,
+                'descendants': 30,
+                'by': 'curious_user',
+                'time': 1642234567
+            }
+        ]
+        
+        async def mock_fetch_story_details(story_ids):
+            return mock_story_details
+        
+        adapter.fetcher.fetch_story_details = mock_fetch_story_details
+        
+        raw_data = [1]
+        events = await adapter.adapt_async(raw_data)
+        
+        assert len(events) == 1
+        assert events[0].title == "Ask HN: What is your favorite programming language?"
+        assert events[0].body == "I am curious about what programming languages people prefer and why.\n\n---\nPosted by curious_user | Score: 75 points | Comments: 30"
+    
+    @pytest.mark.asyncio
+    async def test_adapt_async_fallback_on_error(self, adapter):
+        """Test that async adapt falls back to basic events on error"""
+        async def mock_fetch_story_details(story_ids):
+            raise Exception("API error")
+        
+        adapter.fetcher.fetch_story_details = mock_fetch_story_details
+        
+        raw_data = [1, 2, 3]
+        events = await adapter.adapt_async(raw_data)
+        
+        # Should fall back to basic events
+        assert len(events) == 3
+        assert events[0].title == "HackerNews Top Story #1"
+        assert events[0].body == "Story ID: 1 - Unable to fetch details\n\n---\nSource: HackerNews"
 
 
 class TestGenericStatusAdapter:

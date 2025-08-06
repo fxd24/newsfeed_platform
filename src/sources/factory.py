@@ -9,7 +9,7 @@ import logging
 from typing import Type, Any
 
 from src.sources import UniversalNewsSource, SourceConfig, SourceAdapter, DataFetcher
-from src.sources.fetchers import JSONAPIFetcher, RSSFetcher, MockFetcher
+from src.sources.fetchers import JSONAPIFetcher, RSSFetcher, MockFetcher, HackerNewsFetcher
 from src.sources.adapters import (
     GitHubStatusAdapter, HackerNewsAdapter,
     GenericStatusAdapter, RSSAdapter, GitHubSecurityAdvisoriesAdapter
@@ -25,7 +25,8 @@ class SourceFactory:
         self._fetcher_registry: dict[str, Type[DataFetcher]] = {
             'json_api': JSONAPIFetcher,
             'rss': RSSFetcher,
-            'mock': MockFetcher
+            'mock': MockFetcher,
+            'hackernews': HackerNewsFetcher
         }
         
         self._adapter_registry: dict[str, Type[SourceAdapter]] = {
@@ -40,17 +41,21 @@ class SourceFactory:
     def create_source(self, config: SourceConfig) -> UniversalNewsSource:
         """Create a UniversalNewsSource from configuration"""
         try:
-            # Create fetcher
-            fetcher_class = self._fetcher_registry.get(config.source_type)
-            if not fetcher_class:
-                raise ValueError(f"Unknown source type: {config.source_type}")
-            
-            # Handle special cases for fetcher initialization
-            if config.source_type == 'mock':
-                # MockFetcher requires mock_data
-                fetcher = fetcher_class({})
+            # Create fetcher - handle special cases
+            if config.adapter_class == 'HackerNewsAdapter':
+                # Use specialized HackerNews fetcher for HackerNews adapter
+                fetcher = HackerNewsFetcher()
             else:
-                fetcher = fetcher_class()
+                fetcher_class = self._fetcher_registry.get(config.source_type)
+                if not fetcher_class:
+                    raise ValueError(f"Unknown source type: {config.source_type}")
+                
+                # Handle special cases for fetcher initialization
+                if config.source_type == 'mock':
+                    # MockFetcher requires mock_data
+                    fetcher = fetcher_class({})
+                else:
+                    fetcher = fetcher_class()
             
             # Create adapter
             adapter_class = self._adapter_registry.get(config.adapter_class)

@@ -10,6 +10,7 @@ import logging
 from typing import Any, Optional
 import xml.etree.ElementTree as ET
 import json
+import asyncio
 
 
 logger = logging.getLogger(__name__)
@@ -165,10 +166,79 @@ class RSSFetcher:
 class MockFetcher:
     """Mock fetcher for testing purposes"""
     
-    def __init__(self, mock_data: Any):
+    def __init__(self, mock_data: dict[str, Any]):
         self.mock_data = mock_data
     
     async def fetch(self, url: str, **kwargs) -> Any:
-        """Return mock data"""
-        logger.debug(f"Mock fetcher returning data for {url}")
-        return self.mock_data 
+        """Return mock data for testing"""
+        return self.mock_data
+
+
+class HackerNewsFetcher:
+    """Specialized fetcher for HackerNews API that can fetch individual story details"""
+    
+    def __init__(self, timeout: int = 30):
+        self.timeout = timeout
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.base_url = "https://hacker-news.firebaseio.com/v0"
+    
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create HTTP session"""
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=self.timeout)
+            )
+        return self.session
+    
+    async def fetch(self, url: str, **kwargs) -> Any:
+        """Fetch data from HackerNews API"""
+        session = await self._get_session()
+        
+        headers = kwargs.get('headers', {})
+        headers.setdefault('User-Agent', 'Newsfeed-Platform/1.0')
+        
+        try:
+            async with session.get(url, headers=headers) as response:
+                response.raise_for_status()
+                return await response.json()
+                
+        except aiohttp.ClientError as e:
+            logger.error(f"HTTP error fetching {url}: {e}")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error for {url}: {e}")
+            raise
+    
+    async def fetch_story_details(self, story_ids: list[int]) -> list[dict[str, Any]]:
+        """Fetch details for multiple stories concurrently"""
+        session = await self._get_session()
+        headers = {'User-Agent': 'Newsfeed-Platform/1.0'}
+        
+        async def fetch_story(story_id: int) -> dict[str, Any]:
+            """Fetch a single story by ID"""
+            url = f"{self.base_url}/item/{story_id}.json"
+            try:
+                async with session.get(url, headers=headers) as response:
+                    response.raise_for_status()
+                    return await response.json()
+            except Exception as e:
+                logger.error(f"Error fetching story {story_id}: {e}")
+                return None
+        
+        # Fetch all stories concurrently
+        tasks = [fetch_story(story_id) for story_id in story_ids]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Filter out None results and exceptions
+        stories = []
+        for result in results:
+            if isinstance(result, dict) and result is not None:
+                stories.append(result)
+        
+        return stories
+    
+    async def close(self):
+        """Close the HTTP session"""
+        if self.session and not self.session.closed:
+            await self.session.close()
+            self.session = None 
