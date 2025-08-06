@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from src.models.domain import NewsEvent, NewsType
 
 import logging
+import math
 import chromadb
 from chromadb.config import Settings
 
@@ -232,13 +233,16 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
             logger.error(f"Failed to delete all events from ChromaDB: {e}")
             raise
     
-    def search_events(self, query: str, limit: int = 10, days_back: int = None) -> list[NewsEvent]:
-        """Semantic search for events (ChromaDB-specific method)
+    def search_events(self, query: str, limit: int = 10, days_back: int = None, 
+                     alpha: float = 0.7, decay_param: float = 0.02) -> list[NewsEvent]:
+        """Semantic search for events with hybrid relevancy + recency scoring
         
         Args:
             query: Search query text
             limit: Maximum number of results to return
             days_back: Optional filter to only return events from the last N days
+            alpha: Weight for relevancy vs recency (0.7 = 70% relevancy, 30% recency)
+            decay_param: Exponential decay parameter for recency scoring (0.02 = 2% decay per day)
         """
         try:
             # Calculate timestamp filter if days_back is specified
@@ -247,22 +251,50 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                 cutoff_timestamp = int((datetime.now() - timedelta(days=days_back)).timestamp())
                 where_filter = {"published_at_timestamp": {"$gte": cutoff_timestamp}}
             
+            # Get more results than needed to allow for re-ranking
+            search_limit = min(limit * 3, 100)  # Get up to 3x the requested limit, max 100
+            
             results = self.collection.query(
                 query_texts=[query],
-                n_results=limit,
-                where=where_filter
+                n_results=search_limit,
+                where=where_filter,
+                include=["metadatas", "distances"]  # Include distances for scoring
             )
             
-            events = []
+            if not results["ids"][0]:
+                return []
+            
+            # Calculate hybrid scores
+            scored_events = []
+            current_time = datetime.now()
+            
             for i, event_id in enumerate(results["ids"][0]):
                 metadata = results["metadatas"][0][i]
+                distance = results["distances"][0][i]  # ChromaDB distance (lower = more similar)
+                
+                # Calculate relevancy score (1 - distance, so higher = more relevant)
+                relevancy_score = 1.0 - distance
+                
+                # Calculate recency score using exponential decay
+                published_at = datetime.fromisoformat(metadata["published_at"])
+                # Convert to naive datetime for consistent comparison
+                if published_at.tzinfo is not None:
+                    published_at = published_at.replace(tzinfo=None)
+                if current_time.tzinfo is not None:
+                    current_time = current_time.replace(tzinfo=None)
+                
+                days_old = (current_time - published_at).days
+                recency_score = math.exp(-decay_param * days_old)
+                
+                # Combine scores with weights
+                combined_score = alpha * relevancy_score + (1 - alpha) * recency_score
                 
                 event = NewsEvent(
                     id=event_id,
                     source=metadata["source"],
                     title=metadata["title"],
                     body=metadata.get("body", ""),
-                    published_at=datetime.fromisoformat(metadata["published_at"]),
+                    published_at=published_at,
                     status=metadata.get("status"),
                     impact_level=metadata.get("impact_level"),
                     news_type=NewsType(metadata.get("news_type")) if metadata.get("news_type") else NewsType.UNKNOWN,
@@ -274,10 +306,15 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                     resolved_at=datetime.fromisoformat(metadata["resolved_at"]) if metadata.get("resolved_at") else None,
                     started_at=datetime.fromisoformat(metadata["started_at"]) if metadata.get("started_at") else None,
                 )
-                events.append(event)
+                
+                scored_events.append((event, combined_score, relevancy_score, recency_score))
+            
+            # Sort by combined score (highest first) and take top results
+            scored_events.sort(key=lambda x: x[1], reverse=True)
+            events = [event for event, _, _, _ in scored_events[:limit]]
             
             filter_info = f" (filtered to last {days_back} days)" if days_back is not None else ""
-            logger.info(f"Found {len(events)} events for query: '{query}'{filter_info}")
+            logger.info(f"Found {len(events)} events for query: '{query}'{filter_info} with hybrid scoring (α={alpha}, decay={decay_param})")
             return events
             
         except Exception as e:

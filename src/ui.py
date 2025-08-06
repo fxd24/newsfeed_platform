@@ -146,17 +146,86 @@ def show_ingest_section():
                     st.error(f"❌ Unexpected error: {str(e)}")
 
 def show_retrieve_section():
-    """Retrieve section with events display"""
+    """Retrieve section with events display and hybrid scoring controls"""
     st.header("📤 Retrieve News Events")
+    
+    # Hybrid scoring controls
+    st.subheader("🎯 Hybrid Scoring Parameters")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        limit = st.number_input("Limit", min_value=1, max_value=200, value=100, help="Maximum number of results to return")
+    
+    with col2:
+        days_back = st.number_input("Days Back", min_value=1, max_value=365, value=14, help="Only return events from the last N days")
+    
+    with col3:
+        # Initialize session state
+        if 'alpha' not in st.session_state:
+            st.session_state.alpha = 0.7
+        if 'decay_param' not in st.session_state:
+            st.session_state.decay_param = 0.02
+            
+        alpha = st.slider("α (Alpha)", min_value=0.0, max_value=1.0, value=st.session_state.alpha, step=0.1, 
+                         help="Weight for relevancy vs recency (0.0 = pure recency, 1.0 = pure relevancy)",
+                         key="alpha_slider")
+        st.session_state.alpha = alpha
+    
+    with col4:
+        decay_param = st.slider("Decay Parameter", min_value=0.01, max_value=0.2, value=st.session_state.decay_param, step=0.01,
+                               help="Exponential decay rate for recency scoring (higher = faster decay)",
+                               key="decay_slider")
+        st.session_state.decay_param = decay_param
+    
+    # Display scoring formula
+    st.info(f"""
+    **Scoring Formula:** Combined Score = {alpha:.1f} × relevancy_score + {1-alpha:.1f} × recency_score
+
+    """)
+    
+    # Preset configurations
+    st.subheader("⚡ Quick Presets")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if st.button("🎯 Relevancy Focus", help="90% relevancy, 10% recency"):
+            st.session_state.alpha = 0.9
+            st.session_state.decay_param = 0.02
+            st.rerun()
+    
+    with col2:
+        if st.button("⏰ Recency Focus", help="10% relevancy, 90% recency"):
+            st.session_state.alpha = 0.1
+            st.session_state.decay_param = 0.02
+            st.rerun()
+    
+    with col3:
+        if st.button("⚖️ Balanced", help="70% relevancy, 30% recency (default)"):
+            st.session_state.alpha = 0.7
+            st.session_state.decay_param = 0.02
+            st.rerun()
+    
+    with col4:
+        if st.button("🚀 Fast Decay", help="50% relevancy, 50% recency, high decay"):
+            st.session_state.alpha = 0.5
+            st.session_state.decay_param = 0.1
+            st.rerun()
     
     # Refresh button
     if st.button("🔄 Refresh Events", type="primary"):
         st.rerun()
     
-    # Retrieve events
+    # Retrieve events with parameters
     with st.spinner("Loading events..."):
         try:
-            response = requests.get(f"{API_BASE_URL}/retrieve")
+            params = {
+                'limit': limit,
+                'days_back': days_back,
+                'alpha': alpha,
+                'decay_param': decay_param
+            }
+            response = requests.get(f"{API_BASE_URL}/retrieve", params=params)
             
             if response.status_code == 200:
                 events = response.json()
@@ -174,7 +243,7 @@ def show_retrieve_section():
                         st.markdown("---")
                         
                         # Header with ID and source
-                        col1, col2, col3 = st.columns([2, 2, 1])
+                        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
                         with col1:
                             st.markdown(f"**ID:** `{event['id']}`")
                         with col2:
@@ -183,9 +252,17 @@ def show_retrieve_section():
                             # Format the date nicely
                             try:
                                 pub_date = datetime.fromisoformat(event['published_at'].replace('Z', '+00:00'))
+                                days_old = (datetime.now() - pub_date.replace(tzinfo=None)).days
                                 st.markdown(f"**Date:** {pub_date.strftime('%Y-%m-%d %H:%M')}")
+                                st.markdown(f"**Age:** {days_old} days")
                             except (ValueError, TypeError):
                                 st.markdown(f"**Date:** {event['published_at']}")
+                        with col4:
+                            # Show impact level and news type
+                            impact = event.get('impact_level') or 'unknown'
+                            news_type = event.get('news_type') or 'unknown'
+                            st.markdown(f"**Impact:** {impact.upper()}")
+                            st.markdown(f"**Type:** {news_type}")
                         
                         # Title
                         st.markdown(f"### {event['title']}")

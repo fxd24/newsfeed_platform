@@ -72,8 +72,21 @@ async def ingest_events(
 
 
 @router.get("/retrieve", response_model=list[NewsEvent])
-async def retrieve_events(repository: NewsEventRepository = Depends(get_repository)):
-    """Return filtered events relevant to IT managers using semantic search"""
+async def retrieve_events(
+    repository: NewsEventRepository = Depends(get_repository),
+    limit: int = 100,
+    days_back: int = 14,
+    alpha: float = 0.7,
+    decay_param: float = 0.02
+):
+    """Return filtered events relevant to IT managers using hybrid relevancy + recency scoring
+    
+    Args:
+        limit: Maximum number of results to return
+        days_back: Only return events from the last N days
+        alpha: Weight for relevancy vs recency (0.7 = 70% relevancy, 30% recency)
+        decay_param: Exponential decay parameter for recency scoring (0.02 = 2% decay per day)
+    """
     try:
         # IT Manager focused query for major outages, cybersecurity threats, and critical software bugs
         it_manager_query = """
@@ -85,8 +98,14 @@ async def retrieve_events(repository: NewsEventRepository = Depends(get_reposito
         
         # Use semantic search if repository supports it (ChromaDB)
         if hasattr(repository, 'search_events'):
-            events = repository.search_events(it_manager_query, limit=100, days_back=14)
-            logger.info(f"Retrieved {len(events)} IT-relevant events using semantic search")
+            events = repository.search_events(
+                it_manager_query, 
+                limit=limit, 
+                days_back=days_back,
+                alpha=alpha,
+                decay_param=decay_param
+            )
+            logger.info(f"Retrieved {len(events)} IT-relevant events using hybrid scoring (α={alpha}, decay={decay_param})")
         else:
             # Fallback to all events for in-memory repository
             events = repository.get_all_events()
