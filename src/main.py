@@ -19,6 +19,9 @@ STORAGE_TYPE = "chromadb"  # chromadb | inmemory
 CONFIG_FILE = os.getenv("CONFIG_FILE", "config/sources.yaml")
 
 # Configure logging
+# Ensure logs directory exists
+os.makedirs('logs', exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
