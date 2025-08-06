@@ -102,6 +102,22 @@ async def retrieve_events(repository: NewsEventRepository = Depends(get_reposito
         )
 
 
+@router.get("/retrieve/all", response_model=list[NewsEvent])
+async def retrieve_all_events(repository: NewsEventRepository = Depends(get_repository)):
+    """Return all stored events without filtering"""
+    try:
+        events = repository.get_all_events()
+        logger.info(f"Retrieved {len(events)} events from {repository.__class__.__name__}")
+        return events
+        
+    except Exception as e:
+        logger.error(f"Error during retrieval: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve events: {str(e)}"
+        )
+
+
 # Admin endpoints for managing sources and polling
 
 @router.post("/admin/poll/all")

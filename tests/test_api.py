@@ -194,7 +194,7 @@ class BaseAPITestCase:
         assert ingest_response.status_code == 200
         
         # Then retrieve all events
-        response = client.get("/retrieve")
+        response = client.get("/retrieve/all")
         
         # Assert the response status code is 200 OK
         assert response.status_code == 200
@@ -224,8 +224,8 @@ class BaseAPITestCase:
         client.post("/ingest", json=sample_events)
         
         # Retrieve events multiple times
-        response1 = client.get("/retrieve")
-        response2 = client.get("/retrieve")
+        response1 = client.get("/retrieve/all")
+        response2 = client.get("/retrieve/all")
         
         # Both responses should be identical
         assert response1.json() == response2.json()
@@ -247,7 +247,7 @@ class BaseAPITestCase:
         assert response.status_code == 200
         
         # Verify the event was stored correctly
-        retrieve_response = client.get("/retrieve")
+        retrieve_response = client.get("/retrieve/all")
         events = retrieve_response.json()
         
         # Find our event
@@ -473,7 +473,7 @@ class TestAPIParametrized:
         assert ingest_response.status_code == 200
         
         # Retrieve events
-        retrieve_response = client.get("/retrieve")
+        retrieve_response = client.get("/retrieve/all")
         assert retrieve_response.status_code == 200
         
         # Verify data

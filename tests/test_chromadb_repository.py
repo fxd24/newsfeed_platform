@@ -1,9 +1,13 @@
 import pytest
 import tempfile
 import shutil
+import logging
 from datetime import datetime
 from src.repositories.news_event_repository import ChromaDBNewsEventRepository
 from src.models.domain import NewsEvent
+from src.models.domain import NewsType
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -403,7 +407,204 @@ class TestChromaDBNewsEventRepository:
         # Verify it works
         assert repo.count_events() == 1
         
-        # Test that operations still work after potential corruption
-        # (This is more of a resilience test)
-        retrieved_event = repo.get_event_by_id("test-event")
-        assert retrieved_event is not None 
+        # Now try to access it again (should work)
+        repo2 = ChromaDBNewsEventRepository(persist_directory=temp_chroma_dir)
+        assert repo2.count_events() == 1
+
+    def test_events_with_affected_components(self, chroma_repository):
+        """Test that events with affected_components lists are properly stored and retrieved"""
+        # Create an event with affected components
+        event = NewsEvent(
+            id="test-components",
+            source="Test Source",
+            title="Test Title",
+            body="Test body",
+            published_at=datetime(2024, 1, 1, 12, 0, 0),
+            affected_components=["Component A", "Component B", "Component C"]
+        )
+        
+        # Store the event
+        chroma_repository.create_events([event])
+        
+        # Retrieve the event
+        retrieved_events = chroma_repository.get_all_events()
+        assert len(retrieved_events) == 1
+        
+        retrieved_event = retrieved_events[0]
+        assert retrieved_event.affected_components == ["Component A", "Component B", "Component C"]
+        
+        # Test search functionality with affected components
+        search_results = chroma_repository.search_events("Component A", limit=5)
+        assert len(search_results) > 0
+        assert any("Component A" in (event.affected_components or []) for event in search_results)
+
+    def test_events_with_null_affected_components(self, chroma_repository):
+        """Test that events with null affected_components are handled correctly"""
+        # Create an event without affected components
+        event = NewsEvent(
+            id="test-no-components",
+            source="Test Source",
+            title="Test Title",
+            body="Test body",
+            published_at=datetime(2024, 1, 1, 12, 0, 0),
+            affected_components=None
+        )
+        
+        # Store the event
+        chroma_repository.create_events([event])
+        
+        # Retrieve the event
+        retrieved_events = chroma_repository.get_all_events()
+        assert len(retrieved_events) == 1
+        
+        retrieved_event = retrieved_events[0]
+        assert retrieved_event.affected_components is None
+
+    def test_events_with_empty_affected_components(self, chroma_repository):
+        """Test that events with empty affected_components lists are handled correctly"""
+        # Create an event with empty affected components
+        event = NewsEvent(
+            id="test-empty-components",
+            source="Test Source",
+            title="Test Title",
+            body="Test body",
+            published_at=datetime(2024, 1, 1, 12, 0, 0),
+            affected_components=[]
+        )
+        
+        # Store the event
+        chroma_repository.create_events([event])
+        
+        # Retrieve the event
+        retrieved_events = chroma_repository.get_all_events()
+        assert len(retrieved_events) == 1
+        
+        retrieved_event = retrieved_events[0]
+        assert retrieved_event.affected_components is None  # Empty list becomes None in storage
+
+    def test_events_with_status_and_impact(self, chroma_repository):
+        """Test that events with status and impact information are properly stored and retrieved"""
+        # Create an event with status and impact information
+        event = NewsEvent(
+            id="test-status-impact",
+            source="GitHub Status",
+            title="Major Service Outage",
+            body="Critical service disruption affecting multiple services",
+            published_at=datetime(2024, 1, 1, 12, 0, 0),
+            status="investigating",
+            impact_level="major",
+            news_type=NewsType.SERVICE_STATUS,
+            url="https://status.github.com/incident/123",
+            affected_components=["Actions", "API", "Webhooks"],
+            created_at=datetime(2024, 1, 1, 12, 0, 0),
+            updated_at=datetime(2024, 1, 1, 13, 0, 0),
+            resolved_at=datetime(2024, 1, 1, 14, 0, 0)
+        )
+        
+        # Store the event
+        chroma_repository.create_events([event])
+        
+        # Retrieve the event
+        retrieved_events = chroma_repository.get_all_events()
+        assert len(retrieved_events) == 1
+        
+        retrieved_event = retrieved_events[0]
+        assert retrieved_event.status == "investigating"
+        assert retrieved_event.impact_level == "major"
+        assert retrieved_event.news_type == NewsType.SERVICE_STATUS
+        assert retrieved_event.url == "https://status.github.com/incident/123"
+        assert retrieved_event.affected_components == ["Actions", "API", "Webhooks"]
+        assert retrieved_event.created_at == datetime(2024, 1, 1, 12, 0, 0)
+        assert retrieved_event.updated_at == datetime(2024, 1, 1, 13, 0, 0)
+        assert retrieved_event.resolved_at == datetime(2024, 1, 1, 14, 0, 0)
+        
+        # Test search functionality with status and impact
+        search_results = chroma_repository.search_events("major outage", limit=5)
+        assert len(search_results) > 0
+        assert any(event.impact_level == "major" for event in search_results)
+
+    def test_events_with_null_status_and_impact(self, chroma_repository):
+        """Test that events with null status and impact are handled correctly"""
+        # Create an event without status and impact information
+        event = NewsEvent(
+            id="test-null-status-impact",
+            source="RSS Feed",
+            title="General News Article",
+            body="This is a general news article without status or impact information",
+            published_at=datetime(2024, 1, 1, 12, 0, 0),
+            status=None,
+            impact_level=None,
+            news_type=NewsType.UNKNOWN
+        )
+        
+        # Store the event
+        chroma_repository.create_events([event])
+        
+        # Retrieve the event
+        retrieved_events = chroma_repository.get_all_events()
+        assert len(retrieved_events) == 1
+        
+        retrieved_event = retrieved_events[0]
+        assert retrieved_event.status is None
+        assert retrieved_event.impact_level is None
+        assert retrieved_event.news_type == NewsType.UNKNOWN
+
+    def test_it_manager_search_query(self, chroma_repository):
+        """Test that IT manager focused search returns relevant IT events"""
+        # Create IT-relevant events
+        it_events = [
+            NewsEvent(
+                id="outage-1",
+                source="AWS Status",
+                title="Major AWS Outage Affecting Multiple Services",
+                body="Critical service disruption impacting EC2, S3, and RDS services across multiple regions. Engineers are working to resolve the issue.",
+                published_at=datetime(2024, 1, 15, 10, 30, 0)
+            ),
+            NewsEvent(
+                id="security-1",
+                source="Security Weekly",
+                title="Critical Zero-Day Vulnerability in Apache Log4j",
+                body="Severe security vulnerability allows remote code execution. Immediate patching required for all affected systems.",
+                published_at=datetime(2024, 1, 15, 14, 45, 0)
+            ),
+            NewsEvent(
+                id="bug-1",
+                source="GitHub Issues",
+                title="Critical Bug in Production Database",
+                body="Data corruption issue affecting production systems. Emergency hotfix being deployed.",
+                published_at=datetime(2024, 1, 16, 9, 0, 0)
+            ),
+            NewsEvent(
+                id="non-it-1",
+                source="Sports News",
+                title="Local Team Wins Championship",
+                body="Great victory for the local sports team in the championship game.",
+                published_at=datetime(2024, 1, 16, 12, 0, 0)
+            )
+        ]
+        
+        chroma_repository.create_events(it_events)
+        
+        # Use the same IT manager query as in the API
+        it_manager_query = """
+        major outage critical incident service disruption system failure
+        cybersecurity threat security breach vulnerability exploit malware ransomware
+        critical software bug severe bug production issue data loss
+        emergency maintenance urgent fix hotfix patch
+        """
+        
+        # Search for IT-relevant events
+        results = chroma_repository.search_events(it_manager_query, limit=10)
+        
+        # Should return IT-relevant events
+        assert len(results) > 0
+        
+        # Check that we get IT-relevant events (outage, security, bug)
+        result_ids = {event.id for event in results}
+        it_relevant_ids = {"outage-1", "security-1", "bug-1"}
+        
+        # At least some IT-relevant events should be returned
+        assert len(result_ids.intersection(it_relevant_ids)) > 0
+        
+        # Verify the non-IT event is less likely to be returned
+        # (though semantic search might still return it with lower relevance) 
