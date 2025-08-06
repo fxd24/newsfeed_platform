@@ -9,7 +9,6 @@ import logging
 from typing import Any
 from datetime import datetime
 import uuid
-import asyncio
 
 from src.sources import SourceAdapter
 from src.models.domain import NewsEvent, NewsType
@@ -230,7 +229,7 @@ class GitHubStatusAdapter(SourceAdapter):
                     try:
                         dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                         formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
-                    except:
+                    except (ValueError, TypeError):
                         formatted_time = created_at
                 else:
                     formatted_time = "Unknown time"
@@ -500,7 +499,7 @@ class GenericStatusAdapter(SourceAdapter):
                     try:
                         dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                         formatted_time = dt.strftime('%Y-%m-%d %H:%M UTC')
-                    except:
+                    except (ValueError, TypeError):
                         formatted_time = created_at
                 else:
                     formatted_time = "Unknown time"

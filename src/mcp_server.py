@@ -7,7 +7,6 @@ import asyncio
 import logging
 import os
 import sys
-from typing import Optional
 from fastmcp import FastMCP
 import httpx
 
