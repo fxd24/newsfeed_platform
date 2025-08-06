@@ -163,6 +163,12 @@ class SourceManager:
         except Exception as e:
             self.logger.error(f"Error fetching from {source_name}: {e}")
             return []
+        finally:
+            # Ensure proper cleanup of HTTP sessions
+            try:
+                await source.fetcher.close()
+            except Exception as cleanup_error:
+                self.logger.warning(f"Error closing fetcher for {source_name}: {cleanup_error}")
     
     def get_source_status(self) -> dict[str, dict[str, Any]]:
         """Get status information for all sources"""

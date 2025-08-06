@@ -53,6 +53,7 @@ class JSONAPIFetcher:
         """Close the HTTP session"""
         if self.session and not self.session.closed:
             await self.session.close()
+            self.session = None
 
 
 class RSSFetcher:
@@ -158,6 +159,7 @@ class RSSFetcher:
         """Close the HTTP session"""
         if self.session and not self.session.closed:
             await self.session.close()
+            self.session = None
 
 
 class MockFetcher:
