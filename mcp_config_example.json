@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "newsfeed": {
+      "command": "/path/to/your/newsfeed_platform/mcp_server.sh",
+      "cwd": "/path/to/your/newsfeed_platform"
+    }
+  }
+} 

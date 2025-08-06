@@ -56,6 +56,12 @@ The platform uses a **Strategy + Adapter pattern** for maximum flexibility:
 
 The server will start on `http://localhost:8000`
 
+4. **Optional: Set up MCP server** (for AI tool integration):
+   ```bash
+   chmod +x mcp_server.sh
+   ./mcp_server.sh
+   ```
+
 ## ⚙️ Configuration
 
 Sources are configured via `config/sources.yaml`:
@@ -93,13 +99,131 @@ sources:
 - **GenericStatusAdapter**: Configurable for any status page
 - **RSSAdapter**: RSS/Atom feeds
 
+## 🎯 Hybrid Relevancy + Recency Scoring
+
+The platform uses an advanced hybrid scoring system that combines semantic relevancy with exponential decay recency to provide optimal search results for IT managers.
+
+### Scoring Formula
+
+```
+Combined Score = α × relevancy_score + (1-α) × recency_score
+```
+
+Where:
+- **relevancy_score** = 1 - ChromaDB distance (higher = more relevant)
+- **recency_score** = exp(-decay_param × days_old)
+- **α (alpha)** = Weight for relevancy vs recency (default: 0.7)
+- **decay_param** = Exponential decay rate (default: 0.02 = 2% decay per day)
+
+### Parameter Examples
+
+- **α=0.9**: 90% relevancy, 10% recency (focus on content relevance)
+- **α=0.7**: 70% relevancy, 30% recency (balanced approach - DEFAULT)
+- **α=0.1**: 10% relevancy, 90% recency (focus on recent events)
+- **decay=0.02**: 2% decay per day (DEFAULT)
+- **decay=0.1**: 10% decay per day (faster decay)
+- **decay=0.01**: 1% decay per day (slower decay)
+
+### Example API Usage
+
+```bash
+# Default balanced scoring
+GET /retrieve
+
+# Relevancy-focused search
+GET /retrieve?alpha=0.9&decay_param=0.02
+
+# Recency-focused search
+GET /retrieve?alpha=0.1&decay_param=0.02
+
+# High decay rate (events age quickly)
+GET /retrieve?alpha=0.5&decay_param=0.1
+
+# Low decay rate (events stay relevant longer)
+GET /retrieve?alpha=0.5&decay_param=0.01
+```
+
 ## 🔌 API Endpoints
 
 ### Core Endpoints
 
 - `POST /ingest` - Ingest events from external sources
-- `GET /retrieve` - Retrieve all stored events
+- `GET /retrieve` - Retrieve events with hybrid relevancy + recency scoring
+  - Query parameters:
+    - `limit` (int, default: 100): Maximum number of results
+    - `days_back` (int, default: 14): Only return events from last N days
+    - `alpha` (float, default: 0.7): Relevancy weight (0.0-1.0)
+    - `decay_param` (float, default: 0.02): Recency decay parameter
+- `GET /retrieve/all` - Retrieve all stored events without filtering
 - `GET /health` - Health check
+
+## 🤖 MCP Server
+
+The platform includes a Model Context Protocol (MCP) server that allows AI tools (like Cursor IDE, Claude Desktop App, etc.) to retrieve IT-relevant news events directly.
+
+### Features
+
+- **Single Tool**: Only exposes the `/retrieve` API endpoint
+- **IT-Focused**: Returns events relevant to IT managers using hybrid relevancy + recency scoring
+- **Configurable Parameters**: Supports all parameters from the original API
+- **Simple Integration**: Easy to integrate with any MCP-compatible AI tool
+
+### Available Tool
+
+#### `retrieve_news_events`
+
+Retrieves IT-relevant news events from the newsfeed platform.
+
+**Parameters:**
+- `limit` (integer, default: 100): Maximum number of results to return
+- `days_back` (integer, default: 14): Only return events from the last N days
+- `alpha` (number, default: 0.7): Weight for relevancy vs recency (0.7 = 70% relevancy, 30% recency)
+- `decay_param` (number, default: 0.02): Exponential decay parameter for recency scoring
+
+**Returns:** Formatted summary of IT-relevant news events with titles, sources, and previews.
+
+### Setup
+
+1. **Make the script executable**:
+   ```bash
+   chmod +x mcp_server.sh
+   ```
+
+2. **Start the MCP server**:
+   ```bash
+   ./mcp_server.sh
+   ```
+
+### Configuration for MCP Clients
+
+Use the following configuration in your MCP client (e.g., Claude Desktop App, Cursor IDE):
+
+```json
+{
+  "mcpServers": {
+    "newsfeed": {
+      "command": "/path/to/your/newsfeed_platform/mcp_server.sh",
+      "cwd": "/path/to/your/newsfeed_platform"
+    }
+  }
+}
+```
+
+**Important**: Replace `/path/to/your/newsfeed_platform/` with the actual absolute path to your newsfeed platform directory.
+
+### Environment Variables
+
+- `NEWSFEED_API_BASE_URL`: Override the default API URL (default: `http://localhost:8000`)
+
+### Usage Example
+
+When integrated with an MCP client, you can ask questions like:
+
+- "What are the latest IT news events?"
+- "Show me critical security incidents from the last week"
+- "Get the top 20 most relevant IT events"
+
+The MCP server will automatically call the `/retrieve` API with appropriate parameters and return a formatted summary of the events.
 
 ### Admin Endpoints
 
