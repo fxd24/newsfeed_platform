@@ -10,7 +10,7 @@ global:
 sources:
   # GitHub Status Page
   github_status:
-    enabled: true
+    enabled: false
     poll_interval: 300  # 5 minutes
     source_type: "json_api"
     adapter_class: "GitHubStatusAdapter"
@@ -24,7 +24,7 @@ sources:
 
   # HackerNews Top Stories
   hackernews:
-    enabled: true
+    enabled: false
     poll_interval: 600  # 10 minutes
     source_type: "hackernews"
     adapter_class: "HackerNewsAdapter"
@@ -34,7 +34,7 @@ sources:
 
   # Example: Generic Status Page (Cloudflare)
   cloudflare_status:
-    enabled: true
+    enabled: false
     poll_interval: 300
     source_type: "json_api"
     adapter_class: "GenericStatusAdapter"
@@ -49,7 +49,7 @@ sources:
 
   # Example: RSS Feed
   techcrunch_rss:
-    enabled: true
+    enabled: false
     poll_interval: 900  # 15 minutes
     source_type: "rss"
     adapter_class: "RSSAdapter"
@@ -59,7 +59,7 @@ sources:
 
   # Example: Another Generic Status Page
   atlassian_status:
-    enabled: true
+    enabled: false
     poll_interval: 300
     source_type: "json_api"
     adapter_class: "GenericStatusAdapter"
@@ -89,7 +89,7 @@ sources:
 
   # GitHub Security Advisories
   github_security_advisories:
-    enabled: true
+    enabled: false
     poll_interval: 1800  # 30 minutes (GitHub has rate limits)
     source_type: "json_api"
     adapter_class: "GitHubSecurityAdvisoriesAdapter"
