@@ -106,10 +106,10 @@ class IngestionService:
         else:
             event_published_utc = event.published_at
         
-        # Check if event is too far in the future (allow 1 hour for timezone differences)
+        # Check if event is too far in the future (allow 24 hours for timezone differences and clock drift)
         if event_published_utc > current_utc:
             time_diff = event_published_utc - current_utc
-            if time_diff.total_seconds() > 3600:  # 1 hour
+            if time_diff.total_seconds() > 86400:  # 24 hours
                 self.logger.warning(f"Event published_at is too far in the future: {event_published_utc} > {current_utc}")
                 return False
         
@@ -117,13 +117,55 @@ class IngestionService:
     
     def _is_duplicate(self, event: NewsEvent) -> bool:
         """
-        Check if an event is a duplicate.
+        Check if an event is a duplicate based on title, body, source, and exact timestamp.
         
-        This is a simple implementation that could be enhanced with
-        more sophisticated duplicate detection (e.g., fuzzy matching).
+        An event is considered a duplicate if:
+        1. Same title AND body AND source AND published_at timestamp
         """
         try:
-            # TODO: Implement proper duplicate detection
+            # First check if an event with the same ID already exists
+            existing_event = self.repository.get_event_by_id(event.id)
+            if existing_event:
+                # If it exists, check if it's actually different
+                if (existing_event.title == event.title and 
+                    existing_event.body == event.body and
+                    existing_event.status == event.status and
+                    existing_event.impact_level == event.impact_level):
+                    return True  # It's a true duplicate
+                # If different, it's an update, not a duplicate
+                return False
+            
+            # Use ChromaDB metadata filtering to find duplicates efficiently
+            # This uses SQLite filtering, not vector search
+            if hasattr(self.repository, 'collection'):
+                # Handle timezone-aware and naive timestamps
+                event_time = event.published_at
+                if event_time.tzinfo is None:
+                    event_time = event_time.replace(tzinfo=timezone.utc)
+                
+                # Convert to timestamp for metadata filtering
+                event_timestamp = int(event_time.timestamp())
+                
+                # Use ChromaDB's where clause to filter by metadata
+                # This is much faster than vector search as it uses SQLite
+                where_filter = {
+                    "source": event.source,
+                    "title": event.title,
+                    "body": event.body,
+                    "published_at_timestamp": event_timestamp
+                }
+                
+                # Query ChromaDB directly using metadata filtering
+                results = self.repository.collection.get(
+                    where=where_filter,
+                    limit=1  # We only need to know if any exist
+                )
+                
+                # If we found any results, it's a duplicate
+                if results['ids'] and len(results['ids']) > 0:
+                    self.logger.debug(f"Duplicate detected: {event.title} from {event.source}")
+                    return True
+            
             return False
             
         except Exception as e:
