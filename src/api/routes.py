@@ -85,7 +85,7 @@ async def retrieve_events(repository: NewsEventRepository = Depends(get_reposito
         
         # Use semantic search if repository supports it (ChromaDB)
         if hasattr(repository, 'search_events'):
-            events = repository.search_events(it_manager_query, limit=20)
+            events = repository.search_events(it_manager_query, limit=100, days_back=14)
             logger.info(f"Retrieved {len(events)} IT-relevant events using semantic search")
         else:
             # Fallback to all events for in-memory repository

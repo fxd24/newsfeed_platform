@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.models.domain import NewsEvent, NewsType
 
 import logging
@@ -115,6 +115,7 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                     "title": event.title,
                     "body": event.body,
                     "published_at": event.published_at.isoformat(),
+                    "published_at_timestamp": int(event.published_at.timestamp()),
                     "status": event.status,
                     "impact_level": event.impact_level,
                     "news_type": event.news_type.value if event.news_type else None,
@@ -231,12 +232,25 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
             logger.error(f"Failed to delete all events from ChromaDB: {e}")
             raise
     
-    def search_events(self, query: str, limit: int = 10) -> list[NewsEvent]:
-        """Semantic search for events (ChromaDB-specific method)"""
+    def search_events(self, query: str, limit: int = 10, days_back: int = None) -> list[NewsEvent]:
+        """Semantic search for events (ChromaDB-specific method)
+        
+        Args:
+            query: Search query text
+            limit: Maximum number of results to return
+            days_back: Optional filter to only return events from the last N days
+        """
         try:
+            # Calculate timestamp filter if days_back is specified
+            where_filter = None
+            if days_back is not None:
+                cutoff_timestamp = int((datetime.now() - timedelta(days=days_back)).timestamp())
+                where_filter = {"published_at_timestamp": {"$gte": cutoff_timestamp}}
+            
             results = self.collection.query(
                 query_texts=[query],
-                n_results=limit
+                n_results=limit,
+                where=where_filter
             )
             
             events = []
@@ -262,7 +276,8 @@ class ChromaDBNewsEventRepository(NewsEventRepository):
                 )
                 events.append(event)
             
-            logger.info(f"Found {len(events)} events for query: '{query}'")
+            filter_info = f" (filtered to last {days_back} days)" if days_back is not None else ""
+            logger.info(f"Found {len(events)} events for query: '{query}'{filter_info}")
             return events
             
         except Exception as e:
