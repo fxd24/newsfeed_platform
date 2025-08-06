@@ -2,6 +2,18 @@
 
 A real-time IT news aggregation and filtering system with configurable sources, built with FastAPI and ChromaDB.
 
+## 📋 Project Overview
+
+This project represents approximately **10 hours of development work** and serves as a proof-of-concept for a real-time IT news aggregation platform using AI. For detailed explanations of the system's design decisions, assumptions, and future development possibilities, please refer to [`docs/EXPLANATIONS.md`](docs/EXPLANATIONS.md).
+
+## 📚 Documentation
+
+- **Main Documentation**: See [`docs/EXPLANATIONS.md`](docs/EXPLANATIONS.md) for comprehensive explanations of:
+  - System architecture and design decisions
+  - Key assumptions and trade-offs
+  - Future development possibilities and roadmap
+  - Technical implementation details
+
 ## 🚀 Quick Start
 
 ### Prerequisites
