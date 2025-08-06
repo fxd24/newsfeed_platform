@@ -149,10 +149,12 @@ class IngestionService:
                 # Use ChromaDB's where clause to filter by metadata
                 # This is much faster than vector search as it uses SQLite
                 where_filter = {
-                    "source": event.source,
-                    "title": event.title,
-                    "body": event.body,
-                    "published_at_timestamp": event_timestamp
+                    "$and": [
+                        {"source": {"$eq": event.source}},
+                        {"title": {"$eq": event.title}},
+                        {"body": {"$eq": event.body}},
+                        {"published_at_timestamp": {"$eq": event_timestamp}}
+                    ]
                 }
                 
                 # Query ChromaDB directly using metadata filtering
